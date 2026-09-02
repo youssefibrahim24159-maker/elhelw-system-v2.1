@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المصروفات - نظام Elhelw</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="auth.js"></script>
+        <script>const currentSession = requireAuth('admin'); revalidateSession('admin');</script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+    <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+    
+    <div class="container-fluid">
+        <div class="row">
+            <!-- القائمة الجانبية -->
+            <div class="col-md-3 col-lg-2 px-0 sidebar" id="sidebar">
+                <div class="logo">
+                    <i class="fas fa-store glitch"></i>
+                    <h4>نظام Elhelw</h4>
+                    <small>نظام متكامل لإدارة المبيعات</small>
+                </div>
+                <nav class="nav flex-column nav-menu">
+                    <a class="nav-link ripple" href="index.html"><i class="fas fa-chart-line"></i> الرئيسية</a>
+                    <a class="nav-link ripple" href="pos.html" data-page="pos"><i class="fas fa-cash-register"></i> نقطة البيع</a>
+                    <a class="nav-link ripple" href="inventory.html" data-page="inventory"><i class="fas fa-boxes"></i> المخازن</a>
+                    <a class="nav-link ripple" href="invoices.html" data-page="invoices"><i class="fas fa-file-invoice"></i> الفواتير</a>
+                    <a class="nav-link ripple" href="sales-return.html" data-page="sales-return"><i class="fas fa-undo"></i> مرتجع بيع</a>
+                    <a class="nav-link ripple" href="purchase-return.html" data-page="purchase-return"><i class="fas fa-truck-loading"></i> مرتجع شراء</a>
+                    <a class="nav-link ripple" href="purchase-invoice.html" data-page="purchase-invoice"><i class="fas fa-file-invoice-dollar"></i> فاتورة شراء</a>
+                    <a class="nav-link active ripple admin-only-link" href="expenses.html"><i class="fas fa-money-bill-wave"></i> المصروفات</a>
+                    <a class="nav-link ripple" href="customers.html" data-page="customers"><i class="fas fa-users"></i> العملاء</a>
+                    <a class="nav-link ripple admin-only-link" href="reports.html"><i class="fas fa-chart-bar"></i> التقارير</a>
+                    <a class="nav-link ripple admin-only-link" href="users.html"><i class="fas fa-user-shield"></i> إدارة المستخدمين</a>
+                </nav>
+                <div class="footer">
+                    <small>© 2026 - نظام Elhelw<br>الإصدار 2.1</small>
+                </div>
+            </div>
+            
+            <!-- المحتوى الرئيسي -->
+            <div class="col-md-9 col-lg-10 main-content">
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                    <h2 class="gradient-text"><i class="fas fa-money-bill-wave"></i> المصروفات</h2>
+                    <button class="btn btn-danger scale-hover" data-bs-toggle="modal" data-bs-target="#expenseModal"><i class="fas fa-plus"></i> مصروف جديد</button>
+                </div>
+                
+                <!-- إحصائيات -->
+                <div class="row mb-4">
+                    <div class="col-md-4 col-6 mb-3">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-calendar-day"></i></div>
+                            <div class="stat-value" id="todayExpenses">0 ج.م</div>
+                            <div class="stat-label">مصروفات اليوم</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-6 mb-3">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-calendar-alt"></i></div>
+                            <div class="stat-value" id="monthExpenses">0 ج.م</div>
+                            <div class="stat-label">مصروفات الشهر</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-6 mb-3">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-coins"></i></div>
+                            <div class="stat-value" id="totalExpensesStat">0 ج.م</div>
+                            <div class="stat-label">إجمالي المصروفات</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- فلتر -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">📅 من تاريخ</label>
+                                <input type="date" id="expStartDate" class="form-control" onchange="filterExpenses()">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">📅 إلى تاريخ</label>
+                                <input type="date" id="expEndDate" class="form-control" onchange="filterExpenses()">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">التصنيف</label>
+                                <select id="expCategoryFilter" class="form-select" onchange="filterExpenses()">
+                                    <option value="">كل التصنيفات</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-outline-secondary w-100" onclick="resetExpenseFilters()"><i class="fas fa-undo"></i> إظهار الكل</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card animated-border">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-list"></i> سجل المصروفات</span>
+                        <span class="badge bg-dark text-warning" id="expensesCount">0</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0 align-middle">
+                                <thead class="table-light">
+                                    <tr><th>التاريخ</th><th>التصنيف</th><th>البيان</th><th>القيمة</th><th>الإجراء</th></tr>
+                                </thead>
+                                <tbody id="expensesTableBody"></tbody>
+                                <tfoot class="bg-light fw-bold">
+                                    <tr id="expensesTotals"><td colspan="5" class="text-center">لا توجد بيانات</td></tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal مصروف جديد -->
+    <div class="modal fade" id="expenseModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-money-bill-wave"></i> إضافة مصروف</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">التصنيف *</label>
+                        <select id="expenseCategory" class="form-select">
+                            <option value="إيجار">🏠 إيجار</option>
+                            <option value="رواتب">👥 رواتب</option>
+                            <option value="كهرباء ومياه">💡 كهرباء ومياه</option>
+                            <option value="صيانة">🔧 صيانة</option>
+                            <option value="نقل وتوصيل">🚚 نقل وتوصيل</option>
+                            <option value="تسويق ودعاية">📣 تسويق ودعاية</option>
+                            <option value="مصروفات متنوعة">📦 مصروفات متنوعة</option>
+                            <option value="أخرى">✏️ أخرى (اكتب التصنيف)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="customCategoryField" style="display:none;">
+                        <label class="form-label fw-bold">اكتب التصنيف</label>
+                        <input type="text" id="expenseCustomCategory" class="form-control" placeholder="مثال: تبرعات">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">القيمة (ج.م) *</label>
+                        <input type="number" step="0.01" min="0" id="expenseAmount" class="form-control" placeholder="0.00">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">التاريخ</label>
+                        <input type="date" id="expenseDate" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">ملاحظات</label>
+                        <textarea id="expenseNote" class="form-control" rows="2" placeholder="بيان إضافي (اختياري)"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button class="btn btn-danger scale-hover" onclick="saveExpense()"><i class="fas fa-save"></i> حفظ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="helpers.js"></script>
+    <script src="app.js"></script>
+    <script src="expenses.js"></script>
+    <script>applyPagePermissions(currentSession);</script>
+</body>
+</html>

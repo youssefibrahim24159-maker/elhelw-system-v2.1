@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة المستخدمين - نظام Elhelw</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="auth.js"></script>
+        <script>const currentSession = requireAuth('admin'); revalidateSession('admin');</script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+    <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+    
+    <div class="container-fluid">
+        <div class="row">
+            <!-- القائمة الجانبية -->
+            <div class="col-md-3 col-lg-2 px-0 sidebar" id="sidebar">
+                <div class="logo">
+                    <i class="fas fa-store glitch"></i>
+                    <h4>نظام Elhelw</h4>
+                    <small>نظام متكامل لإدارة المبيعات</small>
+                </div>
+                <nav class="nav flex-column nav-menu">
+                    <a class="nav-link ripple" href="index.html"><i class="fas fa-chart-line"></i> الرئيسية</a>
+                    <a class="nav-link ripple" href="pos.html" data-page="pos"><i class="fas fa-cash-register"></i> نقطة البيع</a>
+                    <a class="nav-link ripple" href="inventory.html" data-page="inventory"><i class="fas fa-boxes"></i> المخازن</a>
+                    <a class="nav-link ripple" href="invoices.html" data-page="invoices"><i class="fas fa-file-invoice"></i> الفواتير</a>
+                    <a class="nav-link ripple" href="sales-return.html" data-page="sales-return"><i class="fas fa-undo"></i> مرتجع بيع</a>
+                    <a class="nav-link ripple" href="purchase-return.html" data-page="purchase-return"><i class="fas fa-truck-loading"></i> مرتجع شراء</a>
+                    <a class="nav-link ripple" href="purchase-invoice.html" data-page="purchase-invoice"><i class="fas fa-file-invoice-dollar"></i> فاتورة شراء</a>
+                    <a class="nav-link ripple admin-only-link" href="expenses.html"><i class="fas fa-money-bill-wave"></i> المصروفات</a>
+                    <a class="nav-link ripple" href="customers.html" data-page="customers"><i class="fas fa-users"></i> العملاء</a>
+                    <a class="nav-link ripple admin-only-link" href="reports.html"><i class="fas fa-chart-bar"></i> التقارير</a>
+                    <a class="nav-link active ripple admin-only-link" href="users.html"><i class="fas fa-user-shield"></i> إدارة المستخدمين</a>
+                </nav>
+                <div class="footer">
+                    <small>© 2026 - نظام Elhelw<br>الإصدار 2.2</small>
+                </div>
+            </div>
+            
+            <!-- المحتوى الرئيسي -->
+            <div class="col-md-9 col-lg-10 main-content">
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                    <h2 class="gradient-text"><i class="fas fa-user-shield"></i> إدارة المستخدمين</h2>
+                    <button class="btn btn-primary scale-hover" data-bs-toggle="modal" data-bs-target="#userModal" onclick="openUserModal()"><i class="fas fa-user-plus"></i> إضافة مستخدم</button>
+                </div>
+                <p class="text-muted fw-bold">أنت اللي بتتحكم في مين يدخل النظام وبأي صلاحية. المدير عنده وصول كامل، وتقدر تختار لكل كاشير الصفحات اللي يشوفها بالظبط (زرار <i class="fas fa-list-check"></i> بجانب اسمه لتعديلها في أي وقت).</p>
+                
+                <div class="card animated-border">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0 align-middle">
+                                <thead class="table-light">
+                                    <tr><th>الاسم</th><th>اسم المستخدم</th><th>الصلاحية</th><th>الحالة</th><th>تاريخ الإنشاء</th><th>الإجراءات</th></tr>
+                                </thead>
+                                <tbody id="usersTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: إضافة/تعديل مستخدم -->
+    <div class="modal fade" id="userModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-warning">
+                    <h5 class="modal-title" id="userModalTitle"><i class="fas fa-user-plus"></i> إضافة مستخدم جديد</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="userId">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">الاسم *</label>
+                        <input type="text" id="userName" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">اسم المستخدم *</label>
+                        <input type="text" id="userUsername" class="form-control" dir="ltr">
+                    </div>
+                    <div class="mb-3" id="userPasswordField">
+                        <label class="form-label fw-bold">كلمة المرور *</label>
+                        <input type="password" id="userPassword" class="form-control" dir="ltr" placeholder="6 أحرف على الأقل">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">الصلاحية *</label>
+                        <select id="userRole" class="form-select" onchange="onUserRoleChange()">
+                            <option value="cashier">👤 كاشير - وصول محدود (اختر الصفحات تحت)</option>
+                            <option value="admin">👑 مدير - وصول كامل</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="userPagesField">
+                        <label class="form-label fw-bold">الصفحات المسموح للكاشير يشوفها</label>
+                        <div id="userPagesCheckboxes" class="border rounded p-2"></div>
+                        <small class="text-muted">المصروفات والتقارير وإدارة المستخدمين متاحة للمدير فقط دايمًا.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button class="btn btn-primary scale-hover" onclick="saveUser()"><i class="fas fa-save"></i> حفظ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: تعديل صلاحيات كاشير -->
+    <div class="modal fade" id="userPermsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-warning">
+                    <h5 class="modal-title"><i class="fas fa-list-check"></i> تعديل صفحات الكاشير</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="permsUserId">
+                    <div id="userPermsCheckboxes" class="border rounded p-2"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button class="btn btn-primary" onclick="submitUserPermissions()"><i class="fas fa-save"></i> حفظ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: إعادة تعيين كلمة المرور -->
+    <div class="modal fade" id="resetPassModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title"><i class="fas fa-key"></i> إعادة تعيين كلمة المرور</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="resetUserId">
+                    <label class="form-label fw-bold">كلمة المرور الجديدة</label>
+                    <input type="password" id="newPassword" class="form-control" dir="ltr" placeholder="6 أحرف على الأقل">
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button class="btn btn-warning scale-hover" onclick="submitResetPassword()"><i class="fas fa-check"></i> تأكيد</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="helpers.js"></script>
+    <script src="app.js"></script>
+    <script src="users.js"></script>
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.querySelector('.sidebar-overlay').classList.toggle('active');
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.querySelector('.sidebar-overlay').classList.remove('active');
+        }
+        applyPagePermissions(currentSession);
+    </script>
+</body>
+</html>

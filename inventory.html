@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المخازن - نظام Elhelw</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="auth.js"></script>
+        <script>const currentSession = requireAuth(null, 'inventory'); revalidateSession(null, 'inventory');</script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+    <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+    
+    <div class="container-fluid">
+        <div class="row">
+            <!-- القائمة الجانبية -->
+            <div class="col-md-3 col-lg-2 px-0 sidebar" id="sidebar">
+                <div class="logo">
+                    <i class="fas fa-store glitch"></i>
+                    <h4>نظام Elhelw</h4>
+                    <small>نظام متكامل لإدارة المبيعات</small>
+                </div>
+                <nav class="nav flex-column nav-menu">
+                    <a class="nav-link ripple" href="index.html">
+                        <i class="fas fa-chart-line"></i> الرئيسية
+                    </a>
+                    <a class="nav-link ripple" href="pos.html" data-page="pos">
+                        <i class="fas fa-cash-register"></i> نقطة البيع
+                    </a>
+                    <a class="nav-link active ripple" href="inventory.html" data-page="inventory">
+                        <i class="fas fa-boxes"></i> المخازن
+                    </a>
+                    <a class="nav-link ripple" href="invoices.html" data-page="invoices">
+                        <i class="fas fa-file-invoice"></i> الفواتير
+                    </a>
+                    <a class="nav-link ripple" href="sales-return.html" data-page="sales-return">
+                        <i class="fas fa-undo"></i> مرتجع بيع
+                    </a>
+                    <a class="nav-link ripple" href="purchase-return.html" data-page="purchase-return">
+                        <i class="fas fa-truck-loading"></i> مرتجع شراء
+                    </a>
+                    <a class="nav-link ripple" href="purchase-invoice.html" data-page="purchase-invoice">
+                        <i class="fas fa-file-invoice-dollar"></i> فاتورة شراء
+                    </a>
+                    <a class="nav-link ripple admin-only-link" href="expenses.html">
+                        <i class="fas fa-money-bill-wave"></i> المصروفات
+                    </a>
+                    <a class="nav-link ripple" href="customers.html" data-page="customers">
+                        <i class="fas fa-users"></i> العملاء
+                    </a>
+                    <a class="nav-link ripple admin-only-link" href="reports.html">
+                        <i class="fas fa-chart-bar"></i> التقارير
+                    </a>
+                    <a class="nav-link ripple admin-only-link" href="users.html">
+                        <i class="fas fa-user-shield"></i> إدارة المستخدمين
+                    </a>
+                </nav>
+                <div class="footer">
+                    <small>© 2025 - نظام Elhelw<br>الإصدار 1.0</small>
+                </div>
+            </div>
+            
+            <!-- المحتوى الرئيسي -->
+            <div class="col-md-9 col-lg-10 main-content">
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                    <h2 class="gradient-text"><i class="fas fa-boxes"></i> إدارة المخازن</h2>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-success scale-hover" onclick="showAddProductModal()"><i class="fas fa-plus"></i> منتج جديد</button>
+                        <button class="btn btn-info scale-hover" data-bs-toggle="modal" data-bs-target="#transferModal"><i class="fas fa-exchange-alt"></i> نقل مخزني</button>
+                        <button class="btn btn-secondary scale-hover" data-bs-toggle="modal" data-bs-target="#manageCategoriesModal"><i class="fas fa-tags"></i> إدارة الأنواع</button>
+                        <button class="btn btn-secondary scale-hover" data-bs-toggle="modal" data-bs-target="#manageBranchesModal"><i class="fas fa-store"></i> إدارة المخازن</button>
+                        <button class="btn btn-warning scale-hover" onclick="exportInventory()"><i class="fas fa-file-excel"></i> تصدير</button>
+                        <button class="btn btn-outline-success scale-hover" data-bs-toggle="modal" data-bs-target="#importModal"><i class="fas fa-file-import"></i> استيراد من Excel</button>
+                    </div>
+                </div>
+                
+                <!-- فلتر البحث -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <input type="text" id="searchProduct" class="form-control" placeholder="🔍 بحث بالاسم أو الباركود..." onkeyup="filterProducts()">
+                            </div>
+                            <div class="col-md-3">
+                                <select id="filterCategory" class="form-select" onchange="filterProducts()">
+                                    <option value="">جميع الأنواع</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select id="filterBranch" class="form-select" onchange="filterProducts()">
+                                    <option value="">جميع الفروع</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select id="filterStock" class="form-select" onchange="filterProducts()">
+                                    <option value="">جميع المنتجات</option>
+                                    <option value="low">⚠️ منخفضة الكمية</option>
+                                    <option value="out">❌ نفذت الكمية</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card animated-border">
+                    <div class="card-header">
+                        <h6><i class="fas fa-boxes"></i> قائمة الأصناف <span class="badge bg-success ms-2" id="productsCount">0</span></h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>الصورة</th>
+                                        <th>الاسم</th>
+                                        <th>الباركود</th>
+                                        <th>النوع</th>
+                                        <th>الكمية</th>
+                                        <th>سعر البيع</th>
+                                        <th>سعر الشراء</th>
+                                        <th>الربح</th>
+                                        <th>الفرع</th>
+                                        <th style="min-width: 150px;">الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inventoryTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- إضافة منتج -->
+    <div class="modal fade" id="productModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="productModalLabel"><i class="fas fa-box"></i> إضافة منتج جديد</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="productForm">
+                        <input type="hidden" id="productId">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">اسم المنتج <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="productName" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">الباركود</label>
+                                <input type="text" class="form-control" id="productBarcode">
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="form-label">الوحدة</label>
+                                <select class="form-select" id="productUnit">
+                                    <option value="قطعة">قطعة</option>
+                                    <option value="كرتونة">كرتونة</option>
+                                    <option value="دستة">دستة</option>
+                                    <option value="كيلو">كيلو</option>
+                                    <option value="جرام">جرام</option>
+                                    <option value="لتر">لتر</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">سعر البيع <span class="text-danger">*</span></label>
+                                <input type="number" step="0.01" class="form-control" id="productPrice" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">سعر الشراء <span class="text-danger">*</span></label>
+                                <input type="number" step="0.01" class="form-control" id="productCost" required>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="form-label">الكمية</label>
+                                <input type="number" class="form-control" id="productStock" value="0">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">الحد الأدنى</label>
+                                <input type="number" class="form-control" id="productMinStock" value="10">
+                            </div>
+<div class="col-md-4">
+    <label class="form-label">نوع الصنف</label>
+    <select class="form-select" id="productCategory">
+        <option value="">اختر النوع...</option>
+    </select>
+</div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">الفرع</label>
+                                <select class="form-select" id="productBranch">
+                                    <option value="الفرع الرئيسي">الفرع الرئيسي</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">صورة المنتج</label>
+                                <input type="file" class="form-control" id="productImageFile" accept="image/*">
+                                <small class="text-muted">يمكنك رفع صورة من الجهاز (PNG, JPG, JPEG)</small>
+                            </div>
+                            
+                            <div class="col-12" id="imagePreviewContainer" style="display: none;">
+                                <label class="form-label">معاينة الصورة</label>
+                                <div class="text-center p-3 border rounded bg-light">
+                                    <img id="imagePreview" src="" alt="معاينة" style="max-width: 200px; max-height: 200px; border-radius: 8px;">
+                                    <br>
+                                    <button type="button" class="btn btn-sm btn-danger mt-2" onclick="clearImage()">
+                                        <i class="fas fa-trash"></i> حذف الصورة
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <input type="hidden" id="productImage">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-success scale-hover" onclick="saveProduct()">
+                        <i class="fas fa-save"></i> حفظ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal نقل مخزني -->
+    <div class="modal fade" id="transferModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title"><i class="fas fa-exchange-alt"></i> نقل مخزني</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3"><label class="form-label">📤 من فرع</label><select id="fromBranch" class="form-select"></select></div>
+                    <div class="mb-3"><label class="form-label">📥 إلى فرع</label><select id="toBranch" class="form-select"></select></div>
+                    <div class="mb-3"><label class="form-label">📦 المنتج</label><select id="transferProduct" class="form-select"></select></div>
+                    <div class="mb-3"><label class="form-label">🔢 الكمية</label><input type="number" id="transferQuantity" class="form-control" min="1"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button class="btn btn-primary scale-hover" onclick="performTransfer()">تنفيذ النقل</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal إدارة الأنواع -->
+    <div class="modal fade" id="manageCategoriesModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-secondary text-white">
+                    <h5 class="modal-title"><i class="fas fa-tags"></i> إدارة أنواع المنتجات</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group mb-3">
+                        <input type="text" id="newCategory" class="form-control" placeholder="نوع جديد">
+                        <button class="btn btn-success" onclick="addNewCategory()">إضافة</button>
+                    </div>
+                    <div class="list-group" id="categoriesList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal إدارة المخازن -->
+    <div class="modal fade" id="manageBranchesModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-secondary text-white">
+                    <h5 class="modal-title"><i class="fas fa-store"></i> إدارة المخازن</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group mb-3">
+                        <input type="text" id="newBranch" class="form-control" placeholder="مخزن جديد">
+                        <button class="btn btn-success" onclick="addNewBranch()">إضافة</button>
+                    </div>
+                    <div class="list-group" id="branchesList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal استيراد من Excel -->
+    <div class="modal fade" id="importModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-file-import"></i> استيراد منتجات من Excel</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-light border">
+                        <strong>مش عندك ملف جاهز؟</strong> نزّل النموذج الفارغ وابدأ منه، فيه أعمدة الاسم والسعر وكل حاجة.
+                        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="downloadImportTemplate()"><i class="fas fa-download"></i> تحميل نموذج فارغ</button>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">اختر ملف Excel (.xlsx) أو CSV</label>
+                        <input type="file" id="importFileInput" class="form-control" accept=".xlsx,.xls,.csv" onchange="handleImportFile(event)">
+                    </div>
+                    <div id="importPreviewArea" style="display:none;">
+                        <div class="alert alert-success" id="importSummary"></div>
+                        <div class="table-responsive" style="max-height:300px; overflow-y:auto;">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light"><tr><th>الاسم</th><th>الباركود</th><th>الكمية</th><th>سعر البيع</th><th>سعر الشراء</th><th>الفرع</th><th>النوع</th></tr></thead>
+                                <tbody id="importPreviewBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="importErrorArea" class="alert alert-danger" style="display:none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button class="btn btn-success" id="confirmImportBtn" style="display:none;" onclick="confirmImport()"><i class="fas fa-check"></i> تأكيد الاستيراد</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="helpers.js"></script>
+    <script src="app.js"></script>
+    <script src="inventory.js"></script>
+    <script>
+        let currentProducts = [];
+        let parsedImportRows = [];
+        
+        // ==================== استيراد من Excel ====================
+        function downloadImportTemplate() {
+            const sample = [
+                { 'الاسم': 'مثال: أرز أبيض 1 كيلو', 'الباركود': '622001234567', 'الكمية': 50, 'سعر البيع': 25, 'سعر الشراء': 20, 'الوحدة': 'قطعة', 'النوع': 'مواد غذائية', 'الفرع': 'الفرع الرئيسي', 'الحد الأدنى': 10 }
+            ];
+            const ws = XLSX.utils.json_to_sheet(sample);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'منتجات');
+            XLSX.writeFile(wb, 'نموذج_استيراد_منتجات.xlsx');
+        }
+        
+        function findColumnValue(row, candidates) {
+            for(const key of Object.keys(row)) {
+                const normalized = key.trim().toLowerCase();
+                if(candidates.some(c => normalized === c.toLowerCase())) return row[key];
+            }
+            return undefined;
+        }
+        
+        function handleImportFile(event) {
+            const file = event.target.files[0];
+            const errorArea = document.getElementById('importErrorArea');
+            const previewArea = document.getElementById('importPreviewArea');
+            errorArea.style.display = 'none';
+            previewArea.style.display = 'none';
+            document.getElementById('confirmImportBtn').style.display = 'none';
+            if(!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+                    
+                    parsedImportRows = rows.map(row => ({
+                        name: findColumnValue(row, ['الاسم', 'name', 'اسم المنتج', 'اسم الصنف', 'الصنف']),
+                        barcode: findColumnValue(row, ['الباركود', 'barcode', 'رقم الصنف', 'كود الصنف', 'الكود']) || '',
+                        stock: parseInt(findColumnValue(row, ['الكمية', 'stock', 'quantity'])) || 0,
+                        price: parseFloat(findColumnValue(row, ['سعر البيع', 'price'])) || 0,
+                        cost: parseFloat(findColumnValue(row, ['سعر الشراء', 'cost'])) || 0,
+                        unit: findColumnValue(row, ['الوحدة', 'unit']) || 'قطعة',
+                        category: findColumnValue(row, ['النوع', 'category', 'التصنيف']) || '',
+                        branch: findColumnValue(row, ['الفرع', 'branch', 'المخزن']) || 'الفرع الرئيسي',
+                        minStock: parseInt(findColumnValue(row, ['الحد الأدنى', 'minstock', 'min_stock'])) || 10
+                    })).filter(p => p.name && String(p.name).trim() !== '');
+                    
+                    if(parsedImportRows.length === 0) {
+                        errorArea.textContent = 'مفيش صفوف صالحة في الملف - تأكد إن عمود "الاسم" موجود ومليان';
+                        errorArea.style.display = 'block';
+                        return;
+                    }
+                    
+                    document.getElementById('importSummary').textContent = 'هيتم استيراد ' + parsedImportRows.length + ' منتج. راجعهم قبل التأكيد:';
+                    document.getElementById('importPreviewBody').innerHTML = parsedImportRows.slice(0, 50).map(p =>
+                        '<tr><td>' + p.name + '</td><td>' + (p.barcode || '-') + '</td><td>' + p.stock + '</td><td>' + p.price + '</td><td>' + p.cost + '</td><td>' + p.branch + '</td><td>' + (p.category || '-') + '</td></tr>'
+                    ).join('') + (parsedImportRows.length > 50 ? '<tr><td colspan="7" class="text-center text-muted">... و' + (parsedImportRows.length - 50) + ' صنف تاني</td></tr>' : '');
+                    
+                    previewArea.style.display = 'block';
+                    document.getElementById('confirmImportBtn').style.display = 'inline-block';
+                } catch(err) {
+                    errorArea.textContent = 'حصل خطأ في قراءة الملف: ' + err.message;
+                    errorArea.style.display = 'block';
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+        
+        async function confirmImport() {
+            if(parsedImportRows.length === 0) return;
+            const btn = document.getElementById('confirmImportBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الاستيراد...';
+            
+            const result = await addProductsBulk(parsedImportRows);
+            
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check"></i> تأكيد الاستيراد';
+            
+            if(!result.success) {
+                showNotification('حصل خطأ أثناء الاستيراد ❌: ' + (result.message || ''), 'error');
+                return;
+            }
+            
+            showNotification('تم استيراد ' + result.count + ' منتج بنجاح 🎉', 'success');
+            showConfetti();
+            bootstrap.Modal.getInstance(document.getElementById('importModal')).hide();
+            document.getElementById('importFileInput').value = '';
+            document.getElementById('importPreviewArea').style.display = 'none';
+            parsedImportRows = [];
+            
+            if(typeof filterProducts === 'function') filterProducts();
+            if(typeof loadFilterSelects === 'function') loadFilterSelects();
+            if(typeof loadAllCategorySelects === 'function') loadAllCategorySelects();
+        }
+        
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.querySelector('.sidebar-overlay').classList.toggle('active');
+        }
+        
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.querySelector('.sidebar-overlay').classList.remove('active');
+        }
+        
+// ==================== تحميل الأنواع في كل القوائم ====================
+async function loadAllCategorySelects() {
+    const categories = await getAllCategories();
+    
+    // تحديث قائمة نوع الصنف في فورم المنتج
+    const productCategory = document.getElementById('productCategory');
+    if(productCategory) {
+        let html = '<option value="">اختر النوع...</option>';
+        for(let i = 0; i < categories.length; i++) {
+            html += '<option value="' + categories[i] + '">' + categories[i] + '</option>';
+        }
+        productCategory.innerHTML = html;
+    }
+    
+    // تحديث قائمة الفلتر
+    const filterCategory = document.getElementById('filterCategory');
+    if(filterCategory) {
+        let html = '<option value="">جميع الأنواع</option>';
+        for(let i = 0; i < categories.length; i++) {
+            html += '<option value="' + categories[i] + '">' + categories[i] + '</option>';
+        }
+        filterCategory.innerHTML = html;
+    }
+    
+    // تحديث datalist لو لسه موجود
+    const categoryList = document.getElementById('categoryList');
+    if(categoryList) {
+        let html = '';
+        for(let i = 0; i < categories.length; i++) {
+            html += '<option value="' + categories[i] + '">';
+        }
+        categoryList.innerHTML = html;
+    }
+}
+
+// ==================== إضافة نوع جديد ====================
+async function addNewCategory() {
+    const newCat = document.getElementById('newCategory').value.trim();
+    if(newCat && await addCategory(newCat)) {
+        showNotification('تم إضافة النوع 🎉', 'success');
+        document.getElementById('newCategory').value = '';
+        loadCategoriesManager();
+        loadAllCategorySelects(); // ← دي المهمة: بتحدث كل القوائم
+    } else {
+        showNotification('النوع موجود بالفعل أو فارغ ❌', 'error');
+    }
+}
+
+// ==================== حذف نوع ====================
+async function deleteCategoryItem(cat) {
+    if(confirm('⚠️ هل أنت متأكد من حذف نوع "' + cat + '"؟')) {
+        if(await deleteCategory(cat)) {
+            showNotification('تم حذف النوع 🗑️', 'success');
+            loadCategoriesManager();
+            loadAllCategorySelects(); // ← دي المهمة: بتحدث كل القوائم بعد الحذف
+        }
+    }
+}
+
+// ==================== تهيئة الصفحة ====================
+if(document.getElementById('inventoryTableBody')) {
+    loadFilterSelects();
+    loadCategoriesManager();
+    loadBranchesManager();
+    loadTransferSelects();
+    loadAllCategorySelects(); // ← تحميل أولي للأنواع
+    filterProducts();
+}
+        
+        async function loadBranchesToSelect(selectId, selectedValue) {
+            const branches = await getAllBranches();
+            const select = document.getElementById(selectId);
+            if(select) {
+                let html = '';
+                for(let i = 0; i < branches.length; i++) {
+                    html += `<option value="${branches[i]}" ${selectedValue === branches[i] ? 'selected' : ''}>${branches[i]}</option>`;
+                }
+                select.innerHTML = html;
+            }
+        }
+        
+        async function filterProducts() {
+            const search = document.getElementById('searchProduct')?.value.toLowerCase() || '';
+            const category = document.getElementById('filterCategory')?.value || '';
+            const branch = document.getElementById('filterBranch')?.value || '';
+            const stockFilter = document.getElementById('filterStock')?.value || '';
+            
+            let products = await getAllProducts();
+            
+            if(search) {
+                products = products.filter(p => p.name.toLowerCase().includes(search) || (p.barcode && p.barcode.toLowerCase().includes(search)));
+            }
+            if(category && category !== '') {
+                products = products.filter(p => p.category === category);
+            }
+            if(branch && branch !== '') {
+                products = products.filter(p => p.branch === branch);
+            }
+            if(stockFilter === 'low') {
+                products = products.filter(p => (p.stock || 0) < (p.minStock || 10));
+            } else if(stockFilter === 'out') {
+                products = products.filter(p => (p.stock || 0) === 0);
+            }
+            
+            currentProducts = products;
+            renderFilteredProducts(products);
+            updateProductsCount();
+        }
+        
+        function renderFilteredProducts(products) {
+            const tbody = document.getElementById('inventoryTableBody');
+            if(!tbody) return;
+            if(products.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-5">🎯 لا توجد منتجات مطابقة</td></tr>';
+                return;
+            }
+            let html = '';
+            for(let i = 0; i < products.length; i++) {
+                const p = products[i];
+                const profit = p.price - p.cost;
+                let profitPercent = 0;
+                if(p.cost > 0) profitPercent = ((profit / p.cost) * 100).toFixed(1);
+                const stockClass = (p.stock || 0) < (p.minStock || 10) ? 'text-danger fw-bold pulse-animation' : '';
+                html += '<tr class="scale-hover">';
+                html += '<td class="text-center fw-bold">' + (i + 1) + '</td>';
+                html += '<td class="text-center"><img src="' + (p.image || 'https://via.placeholder.com/40') + '" width="45" height="45" class="rounded shadow-sm" onerror="this.src=\'https://via.placeholder.com/40\'"></td>';
+                html += '<td><strong class="gradient-text">' + p.name + '</strong></td>';
+                html += '<td><small class="text-muted fw-bold">' + (p.barcode || '-') + '</small></td>';
+                html += '<td><span class="badge bg-dark text-warning">' + (p.category || '-') + '</span></td>';
+                html += '<td class="' + stockClass + '">' + (p.stock || 0) + '</td>';
+                html += '<td class="fw-bold text-warning">' + formatCurrency(p.price) + '</td>';
+                html += '<td>' + formatCurrency(p.cost) + '</td>';
+                html += '<td class="text-success small fw-bold">' + formatCurrency(profit) + ' (' + profitPercent + '%)</td>';
+                html += '<td><span class="badge bg-dark">' + (p.branch || 'الرئيسي') + '</span></td>';
+                html += '<td><div class="action-buttons">';
+                html += '<button class="btn btn-sm btn-warning rotate-hover" onclick="editProduct(' + p.id + ')" title="تعديل"><i class="fas fa-edit"></i></button>';
+                html += '<button class="btn btn-sm btn-danger shake" onclick="deleteProduct(' + p.id + ')" title="حذف"><i class="fas fa-trash"></i></button>';
+                html += '<button class="btn btn-sm btn-info text-white glitch" onclick="addStock(' + p.id + ')" title="توريد"><i class="fas fa-plus"></i> توريد</button>';
+                html += '</div></td>';
+                html += '</tr>';
+            }
+            tbody.innerHTML = html;
+        }
+        
+        async function updateProductsCount() {
+            const countBadge = document.getElementById('productsCount');
+            if(countBadge) {
+                countBadge.textContent = currentProducts.length;
+            }
+        }
+        
+        async function loadCategoriesManager() {
+            const categories = await getAllCategories();
+            const container = document.getElementById('categoriesList');
+            if(container) {
+                let html = '';
+                for(let i = 0; i < categories.length; i++) {
+                    html += `<div class="list-group-item d-flex justify-content-between align-items-center scale-hover">
+                        <span><i class="fas fa-tag text-success me-2"></i>${categories[i]}</span>
+                        <button class="btn btn-sm btn-danger shake" onclick="deleteCategoryItem('${categories[i]}')"><i class="fas fa-trash"></i></button>
+                    </div>`;
+                }
+                container.innerHTML = html || '<div class="text-center text-muted py-3">لا توجد أنواع</div>';
+            }
+        }
+        
+        async function loadBranchesManager() {
+            const branches = await getAllBranches();
+            const container = document.getElementById('branchesList');
+            if(container) {
+                let html = '';
+                for(let i = 0; i < branches.length; i++) {
+                    html += `<div class="list-group-item d-flex justify-content-between align-items-center scale-hover">
+                        <span><i class="fas fa-store text-success me-2"></i>${branches[i]}</span>
+                        <button class="btn btn-sm btn-danger shake" onclick="deleteBranchItem('${branches[i]}')"><i class="fas fa-trash"></i></button>
+                    </div>`;
+                }
+                container.innerHTML = html || '<div class="text-center text-muted py-3">لا توجد مخازن</div>';
+            }
+        }
+        
+        async function addNewBranch() {
+            const newBranch = document.getElementById('newBranch').value.trim();
+            if(newBranch && await addBranch(newBranch)) {
+                showNotification('تم إضافة المخزن 🎉', 'success');
+                document.getElementById('newBranch').value = '';
+                loadBranchesManager();
+                loadBranchesToSelect('productBranch', newBranch);
+                loadBranchesToSelect('filterBranch', '');
+                loadBranchesToSelect('fromBranch', '');
+                loadBranchesToSelect('toBranch', '');
+            } else {
+                showNotification('المخزن موجود أو فارغ ❌', 'error');
+            }
+        }
+        
+        async function deleteBranchItem(branch) {
+            if(confirm(`⚠️ حذف مخزن "${branch}"؟`)) {
+                if(await deleteBranch(branch)) {
+                    showNotification('تم حذف المخزن 🗑️', 'success');
+                    loadBranchesManager();
+                    loadBranchesToSelect('productBranch', '');
+                    loadBranchesToSelect('filterBranch', '');
+                    loadBranchesToSelect('fromBranch', '');
+                    loadBranchesToSelect('toBranch', '');
+                }
+            }
+        }
+        
+        async function loadTransferSelects() {
+            loadBranchesToSelect('fromBranch', '');
+            loadBranchesToSelect('toBranch', '');
+            const products = await getAllProducts();
+            const select = document.getElementById('transferProduct');
+            if(select) {
+                let html = '<option value="">اختر المنتج</option>';
+                for(let i = 0; i < products.length; i++) {
+                    html += `<option value="${products[i].id}">${products[i].name} (${products[i].branch} - المتبقي: ${products[i].stock})</option>`;
+                }
+                select.innerHTML = html;
+            }
+        }
+        
+        async function performTransfer() {
+            const fromBranch = document.getElementById('fromBranch').value;
+            const toBranch = document.getElementById('toBranch').value;
+            const productId = document.getElementById('transferProduct').value;
+            const quantity = parseInt(document.getElementById('transferQuantity').value);
+            
+            if(!fromBranch || !toBranch || !productId || !quantity) {
+                showNotification('املأ جميع البيانات ❌', 'error');
+                return;
+            }
+            if(fromBranch === toBranch) {
+                showNotification('لا يمكن النقل لنفس المخزن ❌', 'error');
+                return;
+            }
+            
+            const result = await transferStock(parseInt(productId), fromBranch, toBranch, quantity);
+            showNotification(result.message, result.success ? 'success' : 'error');
+            
+            if(result.success) {
+                bootstrap.Modal.getInstance(document.getElementById('transferModal')).hide();
+                document.getElementById('transferQuantity').value = '';
+                filterProducts();
+                loadTransferSelects();
+                showConfetti();
+            }
+        }
+        
+        async function loadFilterSelects() {
+            const categories = await getAllCategories();
+            const filterCat = document.getElementById('filterCategory');
+            if(filterCat) {
+                let html = '<option value="">جميع الأنواع</option>';
+                for(let i = 0; i < categories.length; i++) {
+                    html += `<option value="${categories[i]}">${categories[i]}</option>`;
+                }
+                filterCat.innerHTML = html;
+            }
+            
+            const branches = await getAllBranches();
+            const filterBranch = document.getElementById('filterBranch');
+            if(filterBranch) {
+                let html = '<option value="">جميع الفروع</option>';
+                for(let i = 0; i < branches.length; i++) {
+                    html += `<option value="${branches[i]}">${branches[i]}</option>`;
+                }
+                filterBranch.innerHTML = html;
+            }
+        }
+        
+        function clearImage() {
+            document.getElementById('productImage').value = '';
+            document.getElementById('productImageFile').value = '';
+            document.getElementById('imagePreviewContainer').style.display = 'none';
+        }
+        
+        document.getElementById('productImageFile')?.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    document.getElementById('imagePreview').src = event.target.result;
+                    document.getElementById('imagePreviewContainer').style.display = 'block';
+                    document.getElementById('productImage').value = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        applyPagePermissions(currentSession);
+    </script>
+</body>
+</html>

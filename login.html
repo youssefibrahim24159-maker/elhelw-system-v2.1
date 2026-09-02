@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول - نظام Elhelw</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="auth.js"></script>
+    <script>
+        // لو المستخدم داخل بالفعل والاشتراك سليم، وديه على الرئيسية على طول
+        (function() {
+            if(isSubscriptionValid() && getCurrentSession()) {
+                window.location.href = 'index.html';
+            }
+        })();
+    </script>
+</head>
+<body class="login-page-body">
+    <div class="login-particle" style="width:280px;height:280px;top:8%;right:8%;"></div>
+    <div class="login-particle" style="width:200px;height:200px;bottom:10%;left:6%;animation-delay:3s;"></div>
+    <div class="login-particle" style="width:150px;height:150px;top:60%;right:20%;animation-delay:6s;"></div>
+
+    <div class="login-card" id="loginCard">
+        <div class="login-logo">
+            <i class="fas fa-store"></i>
+            <h3>نظام Elhelw</h3>
+            <small>نظام متكامل لإدارة المبيعات</small>
+        </div>
+
+        <!-- الوضع 1: مفيش اشتراك ساري على الجهاز ده -->
+        <div id="licenseMode" style="display:none;">
+            <div class="login-setup-badge" id="licenseBadge"><i class="fas fa-lock"></i> البرنامج غير مفعّل على هذا الجهاز</div>
+            <div class="login-error" id="licenseError"></div>
+            <div class="login-field">
+                <label>معرّف هذا الجهاز (ابعته للمبرمج)</label>
+                <input type="text" id="deviceIdDisplay" class="form-control" readonly dir="ltr" style="text-align:center; letter-spacing:1px; font-weight:700;">
+                <button type="button" class="btn btn-sm btn-outline-warning w-100 mt-2" onclick="copyDeviceId()"><i class="fas fa-copy"></i> نسخ المعرّف</button>
+            </div>
+            <div class="login-field">
+                <label>كود الاشتراك</label>
+                <input type="text" id="licenseCode" class="form-control" placeholder="من المبرمج" dir="ltr" style="text-align:center;">
+            </div>
+            <button class="login-btn" onclick="submitLicense()"><i class="fas fa-key"></i> تفعيل</button>
+            <p class="text-center text-muted small mt-3 mb-0">ابعت معرّف الجهاز اللي فوق للمبرمج، وهو هيديك كود التفعيل</p>
+        </div>
+
+        <!-- الوضع 2: إنشاء متجر جديد (اختياري - بيظهر لما المستخدم يضغط الرابط) -->
+        <div id="setupMode" style="display:none;">
+            <div class="login-setup-badge"><i class="fas fa-crown"></i> إنشاء حساب متجر جديد</div>
+            <div class="login-error" id="setupError"></div>
+            <div class="login-field">
+                <label>اسم المحل/المتجر</label>
+                <input type="text" id="setupShopName" class="form-control" placeholder="مثال: محل الحلو للمواد الغذائية">
+            </div>
+            <div class="login-field">
+                <label>اسمك (المدير)</label>
+                <input type="text" id="setupName" class="form-control" placeholder="اسمك">
+            </div>
+            <div class="login-field">
+                <label>اسم المستخدم</label>
+                <input type="text" id="setupUsername" class="form-control" placeholder="مثال: ahmed_shop1" dir="ltr">
+            </div>
+            <div class="login-field">
+                <label>كلمة المرور</label>
+                <input type="password" id="setupPassword" class="form-control" placeholder="6 أحرف على الأقل" dir="ltr">
+                <button type="button" class="login-toggle-pass" onclick="togglePass('setupPassword', this)"><i class="fas fa-eye"></i></button>
+            </div>
+            <div class="login-field">
+                <label>تأكيد كلمة المرور</label>
+                <input type="password" id="setupPassword2" class="form-control" placeholder="أعد كتابة كلمة المرور" dir="ltr">
+            </div>
+            <button class="login-btn" id="setupBtn" onclick="submitSetup()"><i class="fas fa-crown"></i> إنشاء الحساب والدخول</button>
+            <p class="text-center text-muted small mt-3 mb-0">عندك حساب بالفعل؟ <a href="#" onclick="showLoginMode(); return false;">سجّل دخول من هنا</a></p>
+        </div>
+
+        <!-- الوضع 3: تسجيل الدخول العادي (الافتراضي) -->
+        <div id="loginMode" style="display:none;">
+            <div class="login-error" id="loginError"></div>
+            <div class="login-field">
+                <label>اسم المستخدم</label>
+                <input type="text" id="loginUsername" class="form-control" placeholder="اسم المستخدم" dir="ltr" autofocus>
+            </div>
+            <div class="login-field">
+                <label>كلمة المرور</label>
+                <input type="password" id="loginPassword" class="form-control" placeholder="كلمة المرور" dir="ltr">
+                <button type="button" class="login-toggle-pass" onclick="togglePass('loginPassword', this)"><i class="fas fa-eye"></i></button>
+            </div>
+            <button class="login-btn" id="loginBtn" onclick="submitLogin()"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</button>
+            <p class="text-center text-muted small mt-3 mb-0">
+                محتاج حساب لموظف؟ اطلب من المدير يضيفلك واحد من صفحة إدارة المستخدمين<br>
+                أول مرة تستخدم النظام؟ <a href="#" onclick="showSetupMode(); return false;">اعمل حساب متجر جديد</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        function togglePass(id, btn) {
+            const input = document.getElementById(id);
+            const icon = btn.querySelector('i');
+            if(input.type === 'password') {
+                input.type = 'text';
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+
+        function showError(elId, message) {
+            const el = document.getElementById(elId);
+            el.textContent = message;
+            el.style.display = 'block';
+            const card = document.getElementById('loginCard');
+            card.classList.remove('login-shake');
+            void card.offsetWidth;
+            card.classList.add('login-shake');
+        }
+
+        function hideAllModes() {
+            document.getElementById('setupMode').style.display = 'none';
+            document.getElementById('loginMode').style.display = 'none';
+        }
+        function showSetupMode() { hideAllModes(); document.getElementById('setupMode').style.display = 'block'; }
+        function showLoginMode() { hideAllModes(); document.getElementById('loginMode').style.display = 'block'; }
+
+        function copyDeviceId() {
+            const input = document.getElementById('deviceIdDisplay');
+            input.select();
+            navigator.clipboard?.writeText(input.value).catch(() => document.execCommand('copy'));
+        }
+
+        function submitLicense() {
+            const code = document.getElementById('licenseCode').value;
+            if(!code.trim()) { showError('licenseError', 'اكتب كود الاشتراك اللي وصلك من المبرمج'); return; }
+            const result = activateLicense(code);
+            if(!result.success) { showError('licenseError', result.message); return; }
+            location.reload();
+        }
+
+        async function submitSetup() {
+            const shopName = document.getElementById('setupShopName').value.trim();
+            const name = document.getElementById('setupName').value.trim();
+            const username = document.getElementById('setupUsername').value.trim();
+            const password = document.getElementById('setupPassword').value;
+            const password2 = document.getElementById('setupPassword2').value;
+
+            if(!shopName || !name || !username || !password) { showError('setupError', 'الرجاء ملء كل الحقول'); return; }
+            if(password.length < 6) { showError('setupError', 'كلمة المرور لازم تكون 6 أحرف على الأقل'); return; }
+            if(password !== password2) { showError('setupError', 'كلمتا المرور غير متطابقتين'); return; }
+
+            const btn = document.getElementById('setupBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإنشاء...';
+
+            const result = await setupAdmin(shopName, name, username, password);
+            if(!result.success) {
+                showError('setupError', result.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-crown"></i> إنشاء الحساب والدخول';
+                return;
+            }
+
+            // setupAdmin بقى بيسجل الدخول تلقائيًا (بيرجع جلسة شغالة كاملة)
+            window.location.href = 'index.html';
+        }
+
+        async function submitLogin() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+
+            if(!username || !password) { showError('loginError', 'الرجاء إدخال اسم المستخدم وكلمة المرور'); return; }
+            if(!isSubscriptionValid()) { location.reload(); return; }
+
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الدخول...';
+
+            const result = await login(username, password);
+            if(!result.success) {
+                showError('loginError', result.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> تسجيل الدخول';
+                return;
+            }
+            window.location.href = 'index.html';
+        }
+
+        document.getElementById('loginUsername')?.addEventListener('keypress', e => { if(e.key === 'Enter') submitLogin(); });
+        document.getElementById('loginPassword')?.addEventListener('keypress', e => { if(e.key === 'Enter') submitLogin(); });
+        document.getElementById('setupPassword2')?.addEventListener('keypress', e => { if(e.key === 'Enter') submitSetup(); });
+        document.getElementById('licenseCode')?.addEventListener('keypress', e => { if(e.key === 'Enter') submitLicense(); });
+
+        // إظهار الوضع المناسب
+        (async function decideInitialMode() {
+            // أولوية قصوى: لو صفحة تانية اكتشفت إن الحساب اتمسح/اتوقف/الجهاز اتلغى،
+            // بتحط علامة صريحة هنا - نتحقق منها الأول قبل أي حاجة تانية، بدون تخمين
+            if(localStorage.getItem('accountRevoked') === '1') {
+                localStorage.removeItem('accountRevoked');
+                localStorage.removeItem('subscription');
+                localStorage.removeItem('currentSession');
+                document.getElementById('licenseMode').style.display = 'block';
+                document.getElementById('deviceIdDisplay').value = getDeviceId();
+                document.getElementById('licenseBadge').innerHTML = '<i class="fas fa-ban"></i> تم إلغاء صلاحية هذا الجهاز من قِبل المبرمج - محتاج كود جديد';
+                return;
+            }
+
+            const subStatus = checkSubscriptionStatus();
+            if(!subStatus.valid) {
+                document.getElementById('licenseMode').style.display = 'block';
+                document.getElementById('deviceIdDisplay').value = getDeviceId();
+                if(subStatus.expired) {
+                    document.getElementById('licenseBadge').innerHTML = '<i class="fas fa-exclamation-triangle"></i> انتهى اشتراك هذا الجهاز - محتاج تجديد';
+                }
+                return;
+            }
+
+            // الاشتراك المحلي سليم، بس لازم نتأكد إن المبرمج مامسحش الحساب المرتبط بالجهاز ده
+            const state = await getDeviceAccessState();
+            if(state === 'revoked') {
+                localStorage.removeItem('subscription');
+                localStorage.removeItem('currentSession');
+                document.getElementById('licenseMode').style.display = 'block';
+                document.getElementById('deviceIdDisplay').value = getDeviceId();
+                document.getElementById('licenseBadge').innerHTML = '<i class="fas fa-ban"></i> تم إلغاء صلاحية هذا الجهاز من قِبل المبرمج - محتاج كود جديد';
+                return;
+            }
+
+            showLoginMode();
+        })();
+    </script>
+</body>
+</html>

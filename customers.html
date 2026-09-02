@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>العملاء - نظام Elhelw</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* ========== تنسيق خاص بصفحة العملاء ========== */
+        .customer-card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e5e5;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .customer-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            border-color: #e6c942;
+        }
+        
+        .customer-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 5px;
+            height: 100%;
+            background: linear-gradient(180deg, #e6c942, #dc2626);
+            border-radius: 0 20px 20px 0;
+        }
+        
+        .customer-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1a1a1a, #333);
+            color: #e6c942;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .customer-info h5 {
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: #1a1a1a;
+        }
+        
+        .customer-info p {
+            margin: 3px 0;
+            font-size: 0.85rem;
+            color: #737373;
+        }
+        
+        .customer-info p i {
+            width: 20px;
+            color: #e6c942;
+        }
+        
+        .balance-badge {
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+        
+        .balance-positive {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        
+        .balance-negative {
+            background: #f0fdf4;
+            color: #22c55e;
+            border: 1px solid #bbf7d0;
+        }
+        
+        .balance-zero {
+            background: #f5f5f5;
+            color: #737373;
+            border: 1px solid #e5e5e5;
+        }
+        
+        .stat-box {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #e5e5e5;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-box:hover {
+            border-color: #e6c942;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+        }
+        
+        .stat-box .stat-num {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #1a1a1a, #d4a81e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .stat-box .stat-lbl {
+            color: #737373;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-top: 5px;
+        }
+        
+        /* تنسي4ق الجدول */
+        .customers-table {
+            border-collapse: separate;
+            border-spacing: 0 8px;
+        }
+        
+        .customers-table tbody tr {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: all 0.3s ease;
+        }
+        
+        .customers-table tbody tr:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            background: #fefce8;
+        }
+        
+        .customers-table td {
+            padding: 16px 12px;
+            vertical-align: middle;
+            border: none;
+        }
+        
+        .customers-table td:first-child {
+            border-radius: 0 12px 12px 0;
+        }
+        
+        .customers-table td:last-child {
+            border-radius: 12px 0 0 12px;
+        }
+        
+        /* تنسيق الطباعة */
+        @media print {
+            body {
+                background: white !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            
+            .no-print, .sidebar, .menu-toggle, .btn, .modal-header .btn-close, 
+            .modal-footer, .action-buttons, .sidebar-overlay {
+                display: none !important;
+            }
+            
+            .main-content {
+                margin: 0 !important;
+                padding: 20px !important;
+                width: 100% !important;
+            }
+            
+            .print-area {
+                display: block !important;
+                width: 100% !important;
+                padding: 20px !important;
+                background: white !important;
+            }
+            
+            .print-header {
+                text-align: center !important;
+                border-bottom: 3px solid #e6c942 !important;
+                padding-bottom: 15px !important;
+                margin-bottom: 20px !important;
+            }
+            
+            .print-header h3 {
+                font-size: 1.5rem !important;
+                color: #1a1a1a !important;
+            }
+            
+            .print-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                margin-top: 15px !important;
+            }
+            
+            .print-table th {
+                background: #1a1a1a !important;
+                color: #e6c942 !important;
+                padding: 12px 8px !important;
+                border: 1px solid #333 !important;
+                font-size: 0.8rem !important;
+            }
+            
+            .print-table td {
+                padding: 10px 8px !important;
+                border: 1px solid #e5e5e5 !important;
+                font-size: 0.8rem !important;
+            }
+            
+            .print-total-row {
+                background: #fefce8 !important;
+                font-weight: bold !important;
+            }
+            
+            .print-footer {
+                text-align: center !important;
+                margin-top: 30px !important;
+                padding-top: 15px !important;
+                border-top: 1px solid #e5e5e5 !important;
+                font-size: 0.7rem !important;
+                color: #737373 !important;
+            }
+            
+            * {
+                animation: none !important;
+                transition: none !important;
+            }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="auth.js"></script>
+        <script>const currentSession = requireAuth(null, 'customers'); revalidateSession(null, 'customers');</script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+    <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+    
+    <div class="container-fluid">
+        <div class="row">
+            <!-- القائمة الجانبية -->
+            <div class="col-md-3 col-lg-2 px-0 sidebar" id="sidebar">
+                <div class="logo">
+                    <i class="fas fa-store glitch"></i>
+                    <h4>نظام Elhelw</h4>
+                    <small>نظام متكامل لإدارة المبيعات</small>
+                </div>
+                <nav class="nav flex-column nav-menu">
+                    <a class="nav-link ripple" href="index.html"><i class="fas fa-chart-line"></i> الرئيسية</a>
+                    <a class="nav-link ripple" href="pos.html" data-page="pos"><i class="fas fa-cash-register"></i> نقطة البيع</a>
+                    <a class="nav-link ripple" href="inventory.html" data-page="inventory"><i class="fas fa-boxes"></i> المخازن</a>
+                    <a class="nav-link ripple" href="invoices.html" data-page="invoices"><i class="fas fa-file-invoice"></i> الفواتير</a>
+                    <a class="nav-link ripple" href="sales-return.html" data-page="sales-return"><i class="fas fa-undo"></i> مرتجع بيع</a>
+                    <a class="nav-link ripple" href="purchase-return.html" data-page="purchase-return"><i class="fas fa-truck-loading"></i> مرتجع شراء</a>
+                    <a class="nav-link ripple" href="purchase-invoice.html" data-page="purchase-invoice"><i class="fas fa-file-invoice-dollar"></i> فاتورة شراء</a>
+                    <a class="nav-link ripple admin-only-link" href="expenses.html"><i class="fas fa-money-bill-wave"></i> المصروفات</a>
+                    <a class="nav-link active ripple" href="customers.html" data-page="customers"><i class="fas fa-users"></i> العملاء</a>
+                    <a class="nav-link ripple admin-only-link" href="reports.html"><i class="fas fa-chart-bar"></i> التقارير</a>
+                    <a class="nav-link ripple admin-only-link" href="users.html"><i class="fas fa-user-shield"></i> إدارة المستخدمين</a>
+                </nav>
+                <div class="footer"><small>© 2025 - نظام Elhelw<br>الإصدار 2.0</small></div>
+            </div>
+            
+            <!-- المحتوى الرئيسي -->
+            <div class="col-md-9 col-lg-10 main-content">
+                <!-- إحصائيات سريعة -->
+                <div class="row mb-4">
+                    <div class="col-md-3 col-6 mb-3">
+                        <div class="stat-box">
+                            <div class="stat-num" id="totalCustomersCount">0</div>
+                            <div class="stat-lbl">إجمالي العملاء</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6 mb-3">
+                        <div class="stat-box">
+                            <div class="stat-num text-danger" id="totalDebtors">0</div>
+                            <div class="stat-lbl">العملاء المدينين</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6 mb-3">
+                        <div class="stat-box">
+                            <div class="stat-num text-warning" id="totalDebtAmount">0 ج.م</div>
+                            <div class="stat-lbl">إجمالي الديون</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6 mb-3">
+                        <div class="stat-box">
+                            <div class="stat-num" id="totalSuppliersCount">0</div>
+                            <div class="stat-lbl">إجمالي الموردين</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                    <h2 class="gradient-text"><i class="fas fa-users"></i> العملاء والموردين</h2>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-warning scale-hover" onclick="showCustomerModal()"><i class="fas fa-user-plus"></i> عميل جديد</button>
+                        <button class="btn btn-info scale-hover" onclick="showSupplierModal()"><i class="fas fa-truck"></i> مورد جديد</button>
+                    </div>
+                </div>
+                
+                <!-- التبويبات -->
+                <ul class="nav nav-tabs mb-4">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#customersTab"><i class="fas fa-users"></i> العملاء</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#suppliersTab"><i class="fas fa-truck"></i> الموردين</a>
+                    </li>
+                </ul>
+                
+                <div class="tab-content">
+                    <!-- تبويب العملاء -->
+                    <div class="tab-pane fade show active" id="customersTab">
+                        <!-- بحث -->
+                        <div class="card mb-3">
+                            <div class="card-body py-2">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <input type="text" id="customerSearch" class="form-control" placeholder="🔍 بحث عن عميل..." oninput="filterCustomers()">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <select id="customerFilter" class="form-select" onchange="filterCustomers()">
+                                            <option value="all">جميع العملاء</option>
+                                            <option value="debtor">مدين فقط</option>
+                                            <option value="creditor">دائن فقط</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- جدول العملاء -->
+                        <div class="card animated-border">
+                            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-user-friends text-warning"></i> قائمة العملاء</span>
+                                <span class="badge bg-dark text-warning" id="customersCount">0</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table customers-table mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 50px;">#</th>
+                                                <th>العميل</th>
+                                                <th>الهاتف</th>
+                                                <th>العنوان</th>
+                                                <th>الرصيد</th>
+                                                <th style="width: 220px;">الإجراءات</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="customersTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- تبويب الموردين -->
+                    <div class="tab-pane fade" id="suppliersTab">
+                        <!-- بحث -->
+                        <div class="card mb-3">
+                            <div class="card-body py-2">
+                                <input type="text" id="supplierSearch" class="form-control" placeholder="🔍 بحث عن مورد..." oninput="filterSuppliers()">
+                            </div>
+                        </div>
+                        
+                        <!-- جدول الموردين -->
+                        <div class="card animated-border">
+                            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-truck text-info"></i> قائمة الموردين</span>
+                                <span class="badge bg-dark text-warning" id="suppliersCount">0</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table customers-table mb-0">
+                                        <thead>
+                                            <tr><th>#</th><th>المورد</th><th>الهاتف</th><th>العنوان</th><th>الرصيد</th><th style="width: 150px;">الإجراءات</th></tr>
+                                        </thead>
+                                        <tbody id="suppliersTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal إضافة/تعديل عميل -->
+    <div class="modal fade" id="customerModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-warning" style="border-bottom: 2px solid #e6c942;">
+                    <h5 class="modal-title"><i class="fas fa-user-plus"></i> بيانات العميل</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="customerId">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">الاسم الكامل *</label>
+                        <input type="text" id="customerName" class="form-control" required placeholder="أدخل اسم العميل">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">رقم الهاتف</label>
+                        <input type="text" id="customerPhone" class="form-control" placeholder="01xxxxxxxxx">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">العنوان</label>
+                        <input type="text" id="customerAddress" class="form-control" placeholder="العنوان الكامل">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">الرصيد الافتتاحي</label>
+                        <input type="number" id="customerBalance" class="form-control" value="0">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button class="btn btn-warning scale-hover" onclick="saveCustomer()"><i class="fas fa-save"></i> حفظ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal إضافة/تعديل مورد -->
+    <div class="modal fade" id="supplierModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-warning" style="border-bottom: 2px solid #e6c942;">
+                    <h5 class="modal-title"><i class="fas fa-truck"></i> بيانات المورد</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="supplierId">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">اسم المورد *</label>
+                        <input type="text" id="supplierName" class="form-control" required placeholder="أدخل اسم المورد">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">رقم الهاتف</label>
+                        <input type="text" id="supplierPhone" class="form-control" placeholder="01xxxxxxxxx">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">العنوان</label>
+                        <input type="text" id="supplierAddress" class="form-control" placeholder="العنوان الكامل">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">الرصيد الافتتاحي</label>
+                        <input type="number" id="supplierBalance" class="form-control" value="0">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button class="btn btn-info scale-hover" onclick="saveSupplier()"><i class="fas fa-save"></i> حفظ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="helpers.js"></script>
+    <script src="app.js"></script>
+    <script src="customers.js"></script>
+    
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.querySelector('.sidebar-overlay').classList.toggle('active');
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.querySelector('.sidebar-overlay').classList.remove('active');
+        }
+        
+        // إصلاح التبويبات
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabLinks = document.querySelectorAll('.nav-tabs .nav-link');
+            tabLinks.forEach(function(link) {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href').replace('#', '');
+                    
+                    document.querySelectorAll('.tab-pane').forEach(function(pane) {
+                        pane.classList.remove('show', 'active');
+                    });
+                    document.querySelectorAll('.nav-tabs .nav-link').forEach(function(l) {
+                        l.classList.remove('active');
+                    });
+                    
+                    const targetPane = document.getElementById(targetId);
+                    if(targetPane) {
+                        targetPane.classList.add('show', 'active');
+                        this.classList.add('active');
+                    }
+                });
+            });
+            
+            if(document.getElementById('customersTableBody')) renderCustomers();
+            if(document.getElementById('suppliersTableBody')) renderSuppliers();
+        });
+        applyPagePermissions(currentSession);
+    </script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التقارير - نظام Elhelw</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="auth.js"></script>
+        <script>const currentSession = requireAuth('admin'); revalidateSession('admin');</script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+    <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+    
+    <div class="container-fluid">
+        <div class="row">
+            <!-- القائمة الجانبية -->
+            <div class="col-md-3 col-lg-2 px-0 sidebar" id="sidebar">
+                <div class="logo">
+                    <i class="fas fa-store glitch"></i>
+                    <h4>نظام Elhelw</h4>
+                    <small>نظام متكامل لإدارة المبيعات</small>
+                </div>
+                <nav class="nav flex-column nav-menu">
+                    <a class="nav-link ripple" href="index.html">
+                        <i class="fas fa-chart-line"></i> الرئيسية
+                    </a>
+                    <a class="nav-link ripple" href="pos.html" data-page="pos">
+                        <i class="fas fa-cash-register"></i> نقطة البيع
+                    </a>
+                    <a class="nav-link ripple" href="inventory.html" data-page="inventory">
+                        <i class="fas fa-boxes"></i> المخازن
+                    </a>
+                    <a class="nav-link ripple" href="invoices.html" data-page="invoices">
+                        <i class="fas fa-file-invoice"></i> الفواتير
+                    </a>
+                    <a class="nav-link ripple" href="sales-return.html" data-page="sales-return">
+                        <i class="fas fa-undo"></i> مرتجع بيع
+                    </a>
+                    <a class="nav-link ripple" href="purchase-return.html" data-page="purchase-return">
+                        <i class="fas fa-truck-loading"></i> مرتجع شراء
+                    </a>
+                    <a class="nav-link ripple" href="purchase-invoice.html" data-page="purchase-invoice">
+                        <i class="fas fa-file-invoice-dollar"></i> فاتورة شراء
+                    </a>
+                    <a class="nav-link ripple" href="expenses.html">
+                        <i class="fas fa-money-bill-wave"></i> المصروفات
+                    </a>
+                    <a class="nav-link ripple" href="customers.html" data-page="customers">
+                        <i class="fas fa-users"></i> العملاء
+                    </a>
+                    <a class="nav-link active ripple" href="reports.html">
+                        <i class="fas fa-chart-bar"></i> التقارير
+                    </a>
+                    <a class="nav-link ripple admin-only-link" href="users.html">
+                        <i class="fas fa-user-shield"></i> إدارة المستخدمين
+                    </a>
+                </nav>
+                <div class="footer">
+                    <small>© 2025 - نظام Elhelw<br>الإصدار 1.0</small>
+                </div>
+            </div>
+            
+            <!-- المحتوى الرئيسي -->
+            <div class="col-md-9 col-lg-10 main-content">
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                    <h2 class="gradient-text"><i class="fas fa-chart-line"></i> التقارير المالية</h2>
+                    <button class="btn btn-secondary scale-hover" onclick="printReport()">
+                        <i class="fas fa-print"></i> طباعة التقرير
+                    </button>
+                </div>
+                
+                <!-- فلتر التاريخ -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">📅 من تاريخ</label>
+                                <input type="date" id="startDate" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">📅 إلى تاريخ</label>
+                                <input type="date" id="endDate" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-primary w-100 scale-hover" onclick="updateReports()"><i class="fas fa-search"></i> بحث</button>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-success w-100 scale-hover" onclick="resetDates()"><i class="fas fa-undo"></i> إظهار الكل</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- بطاقات الإحصائيات -->
+                <div class="row mb-4" id="summaryCards"></div>
+                
+                <!-- الرسوم البيانية -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card animated-border">
+                            <div class="card-header bg-primary text-white"><i class="fas fa-chart-line"></i> المبيعات اليومية</div>
+                            <div class="card-body">
+                                <canvas id="salesChart" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card animated-border">
+                            <div class="card-header bg-success text-white"><i class="fas fa-balance-scale"></i> الأرباح والخسائر</div>
+                            <div class="card-body">
+                                <table class="table table-bordered">
+                                    <tr><td><strong>💰 إجمالي المبيعات</strong></td><td id="totalSales" class="text-primary fw-bold">0 ج.م</td></tr>
+                                    <tr><td><strong>↩️ مرتجعات البيع</strong></td><td id="salesReturnsValue" class="text-danger">0 ج.م</td></tr>
+                                    <tr><td><strong>📦 تكلفة البضائع المباعة</strong></td><td id="totalCost" class="text-danger">0 ج.م</td></tr>
+                                    <tr class="table-success"><td><strong>📈 إجمالي الربح</strong></td><td id="totalProfit" class="fw-bold">0 ج.م</td></tr>
+                                    <tr><td><strong>💸 إجمالي المصروفات</strong></td><td id="totalExpenses" class="text-danger">0 ج.م</td></tr>
+                                    <tr class="table-info"><td><strong>🏆 صافي الربح</strong></td><td id="netProfit" class="fw-bold">0 ج.م</td></tr>
+                                    <tr><td><strong>🚚 مرتجعات الشراء (للمورد)</strong></td><td id="purchaseReturnsValue" class="text-muted">0 ج.م</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- المنتجات الأكثر مبيعاً -->
+                <div class="card mb-4 animated-border">
+                    <div class="card-header bg-warning"><i class="fas fa-star"></i> المنتجات الأكثر مبيعاً</div>
+                    <div class="card-body">
+                        <canvas id="topProductsChart" height="150"></canvas>
+                    </div>
+                </div>
+                
+                <!-- تقرير جرد المخزون -->
+                <div class="card animated-border">
+                    <div class="card-header bg-danger text-white"><i class="fas fa-exclamation-triangle shake"></i> تقرير جرد المخزون (منتجات منخفضة الكمية)</div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table mb-0">
+                                <thead class="table-light">
+                                    <tr><th>المنتج</th><th>الكمية الحالية</th><th>الحد الأدنى</th><th>الإجراء</th></tr>
+                                </thead>
+                                <tbody id="lowStockBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="helpers.js"></script>
+    <script src="app.js"></script>
+    <script src="reports.js"></script>
+    <script>applyPagePermissions(currentSession);</script>
+</body>
+</html>
