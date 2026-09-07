@@ -19,7 +19,6 @@ async function renderInventoryTable() {
         
         html += '<tr class="scale-hover">';
         html += '<td class="text-center fw-bold">' + (i + 1) + '</td>';
-        html += '<td class="text-center"><img src="' + (p.image || 'https://via.placeholder.com/40') + '" width="45" height="45" class="rounded shadow-sm" onerror="this.src=\'https://via.placeholder.com/40\'"></td>';
         html += '<td><strong class="gradient-text">' + p.name + '</strong></td>';
         html += '<td><small class="text-muted fw-bold">' + (p.barcode || '-') + '</small></td>';
         html += '<td><span class="badge bg-dark text-warning">' + (p.category || '-') + '</span></td>';
@@ -57,8 +56,7 @@ async function saveProduct() {
         unit: document.getElementById('productUnit').value,
         category: document.getElementById('productCategory').value,
         branch: document.getElementById('productBranch').value,
-        minStock: parseInt(document.getElementById('productMinStock').value) || 10,
-        image: document.getElementById('productImage').value || 'https://via.placeholder.com/40'
+        minStock: parseInt(document.getElementById('productMinStock').value) || 10
     };
     
     if(!validateProduct(product)) return;
@@ -92,7 +90,6 @@ async function editProduct(id) {
         document.getElementById('productUnit').value = product.unit || 'قطعة';
         document.getElementById('productBranch').value = product.branch || 'الفرع الرئيسي';
         document.getElementById('productMinStock').value = product.minStock || 10;
-        document.getElementById('productImage').value = product.image || '';
         new bootstrap.Modal(document.getElementById('productModal')).show();
     }
 }

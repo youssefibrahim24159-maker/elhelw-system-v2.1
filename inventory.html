@@ -117,7 +117,6 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th>#</th>
-                                        <th>الصورة</th>
                                         <th>الاسم</th>
                                         <th>الباركود</th>
                                         <th>النوع</th>
@@ -201,24 +200,6 @@
                                 </select>
                             </div>
                             
-                            <div class="col-md-6">
-                                <label class="form-label">صورة المنتج</label>
-                                <input type="file" class="form-control" id="productImageFile" accept="image/*">
-                                <small class="text-muted">يمكنك رفع صورة من الجهاز (PNG, JPG, JPEG)</small>
-                            </div>
-                            
-                            <div class="col-12" id="imagePreviewContainer" style="display: none;">
-                                <label class="form-label">معاينة الصورة</label>
-                                <div class="text-center p-3 border rounded bg-light">
-                                    <img id="imagePreview" src="" alt="معاينة" style="max-width: 200px; max-height: 200px; border-radius: 8px;">
-                                    <br>
-                                    <button type="button" class="btn btn-sm btn-danger mt-2" onclick="clearImage()">
-                                        <i class="fas fa-trash"></i> حذف الصورة
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <input type="hidden" id="productImage">
                         </div>
                     </form>
                 </div>
@@ -569,7 +550,6 @@ if(document.getElementById('inventoryTableBody')) {
                 const stockClass = (p.stock || 0) < (p.minStock || 10) ? 'text-danger fw-bold pulse-animation' : '';
                 html += '<tr class="scale-hover">';
                 html += '<td class="text-center fw-bold">' + (i + 1) + '</td>';
-                html += '<td class="text-center"><img src="' + (p.image || 'https://via.placeholder.com/40') + '" width="45" height="45" class="rounded shadow-sm" onerror="this.src=\'https://via.placeholder.com/40\'"></td>';
                 html += '<td><strong class="gradient-text">' + p.name + '</strong></td>';
                 html += '<td><small class="text-muted fw-bold">' + (p.barcode || '-') + '</small></td>';
                 html += '<td><span class="badge bg-dark text-warning">' + (p.category || '-') + '</span></td>';
@@ -716,25 +696,7 @@ if(document.getElementById('inventoryTableBody')) {
             }
         }
         
-        function clearImage() {
-            document.getElementById('productImage').value = '';
-            document.getElementById('productImageFile').value = '';
-            document.getElementById('imagePreviewContainer').style.display = 'none';
-        }
-        
-        document.getElementById('productImageFile')?.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if(file) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    document.getElementById('imagePreview').src = event.target.result;
-                    document.getElementById('imagePreviewContainer').style.display = 'block';
-                    document.getElementById('productImage').value = event.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-        applyPagePermissions(currentSession);
+                applyPagePermissions(currentSession);
     </script>
 </body>
 </html>

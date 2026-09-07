@@ -14,10 +14,10 @@ function generateId() {
 
 // ==================== تحويل الأعمدة بين شكل قاعدة البيانات وشكل الواجهة ====================
 function mapProductFromDb(p) {
-    return { id: p.id, name: p.name, barcode: p.barcode, stock: p.stock, price: p.price, cost: p.cost, unit: p.unit, category: p.category, branch: p.branch, minStock: p.min_stock, image: p.image };
+    return { id: p.id, name: p.name, barcode: p.barcode, stock: p.stock, price: p.price, cost: p.cost, unit: p.unit, category: p.category, branch: p.branch, minStock: p.min_stock };
 }
 function mapProductToDb(p, clientId) {
-    return { client_id: clientId, name: p.name, barcode: p.barcode || null, stock: p.stock || 0, price: p.price || 0, cost: p.cost || 0, unit: p.unit || null, category: p.category || null, branch: p.branch || null, min_stock: p.minStock || 10, image: p.image || null };
+    return { client_id: clientId, name: p.name, barcode: p.barcode || null, stock: p.stock || 0, price: p.price || 0, cost: p.cost || 0, unit: p.unit || null, category: p.category || null, branch: p.branch || null, min_stock: p.minStock || 10 };
 }
 function mapInvoiceFromDb(i) {
     return { id: i.id, customerId: i.customer_id, customerName: i.customer_name, items: i.items || [], total: i.total, grandTotal: i.grand_total, paid: i.paid, due: i.due, remaining: i.remaining, paymentMethod: i.payment_method, status: i.status, date: i.date, dateFormatted: i.date ? new Date(i.date).toLocaleString('ar-EG') : '' };
@@ -171,7 +171,7 @@ async function transferStock(productId, fromBranch, toBranch, quantity) {
         await supabase.from('products').insert({
             client_id: clientId, name: product.name, barcode: product.barcode, stock: quantity,
             price: product.price, cost: product.cost, unit: product.unit, category: product.category,
-            branch: toBranch, min_stock: product.min_stock, image: product.image
+            branch: toBranch, min_stock: product.min_stock
         });
     }
 
