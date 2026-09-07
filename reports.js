@@ -279,9 +279,9 @@ function printReport() {
     if (startDate || endDate) {
         const start = startDate ? startDate.split('-').reverse().join('/') : 'بداية';
         const end = endDate ? endDate.split('-').reverse().join('/') : 'نهاية';
-        dateRangeText = `<p style="text-align:center;background:#f0fdf4;padding:10px;border-radius:10px;font-weight:bold;color:#0d6e3b;">الفترة: ${start} - ${end}</p>`;
+        dateRangeText = `<p class="date-range">الفترة: ${start} - ${end}</p>`;
     } else {
-        dateRangeText = `<p style="text-align:center;background:#f0fdf4;padding:10px;border-radius:10px;font-weight:bold;color:#0d6e3b;">عرض جميع البيانات</p>`;
+        dateRangeText = `<p class="date-range">عرض جميع البيانات</p>`;
     }
     
     const totalSales = document.getElementById('totalSales').innerText;
@@ -292,56 +292,67 @@ function printReport() {
     const salesReturnsValue = document.getElementById('salesReturnsValue') ? document.getElementById('salesReturnsValue').innerText : '0.00 ج.م';
     const purchaseReturnsValue = document.getElementById('purchaseReturnsValue') ? document.getElementById('purchaseReturnsValue').innerText : '0.00 ج.م';
     const summaryCards = document.getElementById('summaryCards').innerHTML;
-    const lowStockTable = document.getElementById('lowStockBody').innerHTML;
     
     printWindow.document.write(`
         <!DOCTYPE html>
         <html dir="rtl">
         <head>
             <meta charset="UTF-8">
-            <title>تقرير المبيعات - نظام Elhelw</title>
+            <title>تقرير المبيعات - ${getStoreName()}</title>
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800;900&display=swap" rel="stylesheet">
             <style>
                 * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { font-family: 'Cairo', 'Tahoma', sans-serif; background: white; color: #0f172a; padding: 30px; line-height: 1.5; }
-                .print-header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px solid #0d6e3b; }
-                .print-header h1 { color: #0d6e3b; font-size: 2rem; margin-bottom: 5px; }
-                .print-title { font-size: 1.4rem; font-weight: bold; margin: 25px 0 15px 0; padding-right: 10px; border-right: 5px solid #0d6e3b; }
-                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: center; }
-                th { background: #f1f5f9; font-weight: bold; }
-                .profit-loss-table { max-width: 500px; margin: 0 auto 30px auto; }
+                body { font-family: 'Cairo', 'Tahoma', sans-serif; background: white; color: #000; padding: 26px; line-height: 1.5; font-size: 13px; }
+                .center { text-align: center; }
+                .store-name { font-size: 1.7rem; font-weight: 900; }
+                .store-slogan { font-size: .8rem; color: #444; margin-top: 2px; }
+                .badge { display: inline-block; border: 1px solid #000; border-radius: 20px; padding: 3px 16px; font-size: .8rem; font-weight: 700; margin-top: 8px; }
+                .divider { border-top: 1px dashed #000; margin: 12px 0; }
+                .date-range { font-weight: 700; margin-top: 4px; font-size: .85rem; }
+                .print-title { font-size: 1.05rem; font-weight: 800; margin: 20px 0 12px 0; padding-right: 8px; border-right: 4px solid #000; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
+                th, td { border: 1px solid #000; padding: 8px 6px; text-align: center; }
+                th { background: #f0f0f0; font-weight: 800; font-size: .85rem; }
+                .profit-loss-table { max-width: 480px; margin: 0 auto 20px auto; }
                 .profit-loss-table td { text-align: right; }
-                .profit-loss-table td:first-child { font-weight: bold; background: #f8fafc; }
-                .footer { margin-top: 40px; padding-top: 20px; text-align: center; font-size: 0.7rem; color: #94a3b8; border-top: 1px solid #e2e8f0; }
-                @media print { body { padding: 20px; } }
+                .profit-loss-table td:first-child { font-weight: 700; background: #f8f8f8; }
+                .profit-loss-table td:last-child { text-align: left; font-weight: 700; }
+                .total-box { max-width: 480px; margin: 0 auto 8px auto; border: 1.5px solid #000; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; }
+                .total-box .label { font-size: 1rem; font-weight: 800; }
+                .total-box .amount { font-size: 1.4rem; font-weight: 900; }
+                .footer { margin-top: 26px; padding-top: 12px; text-align: center; font-size: .75rem; color: #333; border-top: 1px dashed #000; }
+                @media print { body { padding: 16px; } }
             </style>
         </head>
         <body>
-            <div class="print-header">
-                <h1>📊 ${getStoreName()}</h1>
-                <p>تقرير المبيعات والأرباح</p>
-                ${dateRangeText}
-                <p style="font-size: 0.8rem; margin-top: 10px;">تاريخ الطباعة: ${new Date().toLocaleString('ar-EG')}</p>
+            <div class="center">
+                <div class="store-name">${getStoreName()}</div>
+                <div class="store-slogan">نظام متكامل لإدارة المبيعات</div>
+                <div class="badge">تقرير المبيعات والأرباح</div>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:30px;">
+            <div class="center">${dateRangeText}</div>
+            <p class="center" style="font-size: 0.75rem; margin-top: 4px; color:#444;">تاريخ الطباعة: ${new Date().toLocaleString('ar-EG')}</p>
+            <div class="divider"></div>
+
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px;">
                 ${summaryCards}
             </div>
-            <div class="print-title">💰 الأرباح والخسائر</div>
+            <div class="print-title">الأرباح والخسائر</div>
             <table class="profit-loss-table">
-                <tr><td>إجمالي المبيعات</td><td style="color:#3b82f6;font-weight:bold;">${totalSales}</td></tr>
-                <tr><td>مرتجعات البيع</td><td style="color:#ef4444;">- ${salesReturnsValue}</td></tr>
-                <tr><td>تكلفة البضائع المباعة</td><td style="color:#ef4444;">${totalCost}</td></tr>
-                <tr style="background:#f0fdf4;"><td style="font-weight:bold;">إجمالي الربح</td><td style="color:#10b981;font-weight:bold;">${totalProfit}</td></tr>
-                <tr><td>إجمالي المصروفات</td><td style="color:#ef4444;">${totalExpenses}</td></tr>
-                <tr style="background:#e0f2fe;"><td style="font-weight:bold;">صافي الربح</td><td style="color:#3b82f6;font-weight:bold;">${netProfit}</td></tr>
-                <tr><td>مرتجعات الشراء (للمورد)</td><td style="color:#64748b;">${purchaseReturnsValue}</td></tr>
+                <tr><td>إجمالي المبيعات</td><td>${totalSales}</td></tr>
+                <tr><td>مرتجعات البيع</td><td>- ${salesReturnsValue}</td></tr>
+                <tr><td>تكلفة البضائع المباعة</td><td>- ${totalCost}</td></tr>
+                <tr><td>إجمالي الربح</td><td>${totalProfit}</td></tr>
+                <tr><td>إجمالي المصروفات</td><td>- ${totalExpenses}</td></tr>
+                <tr><td>مرتجعات الشراء (للمورد)</td><td>${purchaseReturnsValue}</td></tr>
             </table>
-            <div class="print-title">⚠️ تقرير جرد المخزون</div>
-            <table>
-                <thead><tr><th>المنتج</th><th>الكمية الحالية</th><th>الحد الأدنى</th><th>الإجراء</th></tr></thead>
-                <tbody>${lowStockTable}</tbody>
-            </table>
-            <div class="footer"><p>تم إنشاء هذا التقرير بواسطة ${getStoreName()} - جميع الحقوق محفوظة © 2025</p></div>
+            <div class="total-box">
+                <span class="label">صافي الربح</span>
+                <span class="amount">${netProfit}</span>
+            </div>
+
+            <div class="footer"><p>تم إنشاء هذا التقرير بواسطة ${getStoreName()} © 2026</p></div>
         </body>
         </html>
     `);

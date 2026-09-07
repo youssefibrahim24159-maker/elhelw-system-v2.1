@@ -1,0 +1,7 @@
+# صفحة المبرمج - مينفعش تتحط في أي ريبو أو استضافة عامة خالص
+dev-console.html
+dev-console.js
+
+# ملفات النظام المحلية
+.DS_Store
+Thumbs.db

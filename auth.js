@@ -69,13 +69,28 @@ function simpleSign(str) {
 // كل جهاز/متصفح بياخد معرّف عشوائي ثابت أول مرة يتفتح فيها البرنامج.
 // ملحوظة: لو حد مسح بيانات المتصفح (Clear browsing data) هيتغيّر المعرّف
 // ويحتاج كود اشتراك جديد لنفس الجهاز.
+// رقم الجهاز - بنخزنه في مكانين (localStorage + كوكي طويلة المدى) عشان لو أحد
+// المكانين اتمسح (زي مسح جزئي لبيانات المتصفح) نقدر نسترجعه من التاني بدل ما
+// نعتبره جهاز جديد بالغلط
 function getDeviceId() {
-    let id = localStorage.getItem('deviceId');
+    let id = localStorage.getItem('deviceId') || getDeviceIdCookie();
     if(!id) {
         id = 'DEV-' + Math.random().toString(36).slice(2, 8).toUpperCase() + '-' + Date.now().toString(36).toUpperCase();
-        localStorage.setItem('deviceId', id);
     }
+    // نتأكد إن المكانين متزامنين دايمًا (سواء كان الرقم جديد أو مسترجع من التاني)
+    localStorage.setItem('deviceId', id);
+    setDeviceIdCookie(id);
     return id;
+}
+
+function getDeviceIdCookie() {
+    const match = document.cookie.match(/(?:^|;\s*)elhelw_device=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : null;
+}
+
+function setDeviceIdCookie(id) {
+    const tenYears = 10 * 365 * 24 * 60 * 60;
+    document.cookie = 'elhelw_device=' + encodeURIComponent(id) + '; max-age=' + tenYears + '; path=/; SameSite=Lax';
 }
 
 // ==================== توليد والتحقق من كود الاشتراك ====================
@@ -470,12 +485,17 @@ async function revalidateSession(minRole, pageKey) {
     localStorage.setItem('currentSession', JSON.stringify(session));
 
     // تحقق إن المتجر مش موقّف والجهاز ده لسه مسموح له (ممكن المبرمج يكون وقفهم وهو شغال)
-    const { data: client } = await supabase.from('clients').select('suspended').eq('id', session.clientId).maybeSingle();
+    // وفي نفس الوقت نحدّث اسم المتجر محليًا لو المبرمج غيّره من صفحته وهو شغال بالجلسة
+    const { data: client } = await supabase.from('clients').select('name, suspended').eq('id', session.clientId).maybeSingle();
     if(client && client.suspended) {
         localStorage.setItem('accountRevoked', '1');
         localStorage.removeItem('currentSession');
         window.location.href = 'login.html';
         return;
+    }
+    if(client && client.name && client.name !== session.storeName) {
+        session.storeName = client.name;
+        localStorage.setItem('currentSession', JSON.stringify(session));
     }
     const { data: device } = await supabase.from('client_devices').select('active').eq('client_id', session.clientId).eq('device_id', getDeviceId()).maybeSingle();
     if(device && !device.active) {
