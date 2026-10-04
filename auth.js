@@ -113,12 +113,34 @@ function verifyLicenseCode(deviceId, code) {
     return { valid: true, expiryTimestamp: expiryTimestamp };
 }
 
+// الاشتراك المفعّل بيتخزن في مكانين برضو (زي رقم الجهاز) عشان مسح جزئي لبيانات
+// المتصفح مايرجعش يطلب كود جديد من غير داعي طالما نفس رقم الجهاز لسه موجود
 function saveSubscription(code) {
-    localStorage.setItem('subscription', JSON.stringify({ code: code, deviceId: getDeviceId() }));
+    const value = JSON.stringify({ code: code, deviceId: getDeviceId() });
+    localStorage.setItem('subscription', value);
+    setSubscriptionCookie(value);
 }
 
 function getSubscription() {
-    try { return JSON.parse(localStorage.getItem('subscription')); } catch(e) { return null; }
+    let raw = localStorage.getItem('subscription');
+    if(!raw) raw = getSubscriptionCookie();
+    if(!raw) return null;
+    try {
+        const parsed = JSON.parse(raw);
+        // لو كان جاي من الكوكي بس، نرجّعه لـ localStorage كمان عشان يتزامنوا
+        if(!localStorage.getItem('subscription')) localStorage.setItem('subscription', raw);
+        return parsed;
+    } catch(e) { return null; }
+}
+
+function getSubscriptionCookie() {
+    const match = document.cookie.match(/(?:^|;\s*)elhelw_sub=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : null;
+}
+
+function setSubscriptionCookie(value) {
+    const tenYears = 10 * 365 * 24 * 60 * 60;
+    document.cookie = 'elhelw_sub=' + encodeURIComponent(value) + '; max-age=' + tenYears + '; path=/; SameSite=Lax';
 }
 
 // بيتحقق من التوقيع كل مرة بدل ما يثق بالتخزين وحده (منع التلاعب المباشر بالقيمة)

@@ -329,15 +329,44 @@
             XLSX.writeFile(wb, 'نموذج_استيراد_منتجات.xlsx');
         }
         
-        function findColumnValue(row, candidates) {
-            for(const key of Object.keys(row)) {
-                const normalized = key.trim().toLowerCase();
-                if(candidates.some(c => normalized === c.toLowerCase())) return row[key];
-            }
-            return undefined;
-        }
-        
-        function handleImportFile(event) {
+// بنشيل "ال" التعريف من الأول عشان "باركود" و"الباركود" يتطابقوا مع بعض
+function normalizeHeader(s) {
+    return String(s).trim().toLowerCase().replace(/^ال/, '');
+}
+
+function findColumnValue(row, candidates) {
+    const normalizedCandidates = candidates.map(normalizeHeader);
+    const keys = Object.keys(row);
+    // تطابق تام الأول (أدق وأسرع)
+    for(const key of keys) {
+        const normalized = normalizeHeader(key);
+        if(normalizedCandidates.includes(normalized)) return row[key];
+    }
+    // ولو معملش تطابق تام، نجرب تطابق جزئي (زي "آخر سعر شراء" بدل "سعر الشراء")
+    for(const key of keys) {
+        const normalized = normalizeHeader(key);
+        if(normalizedCandidates.some(c => c.length > 2 && normalized.includes(c))) return row[key];
+    }
+    return undefined;
+}
+
+// كل أسماء الأعمدة اللي بندوّر عليها في أي صف نشك إنه هيدر - مستخدمة في اكتشاف
+// صف العناوين الحقيقي لو الملف فيه عنوان/صف فاضي قبل الأعمدة الفعلية
+const IMPORT_HEADER_HINTS = ['الاسم','name','اسم المنتج','اسم الصنف','الصنف','الباركود','barcode','كود الصنف','الكود','الكمية','stock','quantity','إجمالى الكمية','سعر البيع','price','سعر الشراء','cost','آخر سعر شراء','متوسط سعر الشراء','الوحدة','unit','النوع','category','التصنيف','الفرع','branch','المخزن','الحد الأدنى','minstock','min_stock'].map(normalizeHeader);
+
+// بيدوّر على صف العناوين الحقيقي بين أول 15 صف (مش شرط يكون أول صف) - بيحسب لكل
+// صف عدد خلاياه اللي بتشبه اسم عمود معروف، وياخد أعلى واحد بدل ما يفترض إنه الأول
+function detectHeaderRowIndex(grid) {
+    let bestIndex = 0, bestScore = -1;
+    for(let i = 0; i < Math.min(grid.length, 15); i++) {
+        const rowCells = (grid[i] || []).map(c => normalizeHeader(c || ''));
+        const score = rowCells.filter(c => c && IMPORT_HEADER_HINTS.includes(c)).length;
+        if(score > bestScore) { bestScore = score; bestIndex = i; }
+    }
+    return bestScore > 0 ? bestIndex : 0;
+}
+
+function handleImportFile(event) {
             const file = event.target.files[0];
             const errorArea = document.getElementById('importErrorArea');
             const previewArea = document.getElementById('importPreviewArea');
@@ -352,14 +381,19 @@
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
                     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+                    // أول حاجة: نجيب الشيت كشبكة خام عشان نكتشف صف العناوين الحقيقي
+                    // (ممكن يكون فيه صف عنوان أو صف فاضي قبله زي ملفات كتير بتتصدّر)
+                    const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                    const headerRowIndex = detectHeaderRowIndex(grid);
+                    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', range: headerRowIndex });
                     
                     parsedImportRows = rows.map(row => ({
                         name: findColumnValue(row, ['الاسم', 'name', 'اسم المنتج', 'اسم الصنف', 'الصنف']),
-                        barcode: findColumnValue(row, ['الباركود', 'barcode', 'رقم الصنف', 'كود الصنف', 'الكود']) || '',
+                        barcode: findColumnValue(row, ['الباركود', 'barcode', 'كود الصنف', 'الكود']) || '',
                         stock: parseInt(findColumnValue(row, ['الكمية', 'stock', 'quantity'])) || 0,
                         price: parseFloat(findColumnValue(row, ['سعر البيع', 'price'])) || 0,
-                        cost: parseFloat(findColumnValue(row, ['سعر الشراء', 'cost'])) || 0,
+                        cost: parseFloat(findColumnValue(row, ['سعر الشراء', 'cost', 'آخر سعر شراء', 'متوسط سعر الشراء'])) || 0,
                         unit: findColumnValue(row, ['الوحدة', 'unit']) || 'قطعة',
                         category: findColumnValue(row, ['النوع', 'category', 'التصنيف']) || '',
                         branch: findColumnValue(row, ['الفرع', 'branch', 'المخزن']) || 'الفرع الرئيسي',
@@ -403,7 +437,10 @@
                 return;
             }
             
-            showNotification('تم استيراد ' + result.count + ' منتج بنجاح 🎉', 'success');
+            const parts = [];
+            if(result.inserted) parts.push(result.inserted + ' صنف جديد');
+            if(result.updated) parts.push(result.updated + ' صنف اتحدّث');
+            showNotification('تم ✅ ' + (parts.length ? parts.join(' - ') : (result.count + ' منتج')), 'success');
             showConfetti();
             bootstrap.Modal.getInstance(document.getElementById('importModal')).hide();
             document.getElementById('importFileInput').value = '';

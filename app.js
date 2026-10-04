@@ -86,13 +86,44 @@ async function addProduct(product) {
 }
 
 // استيراد جماعي (من ملف إكسل مثلًا) - بيرجع عدد المنتجات اللي اتضافت فعليًا
+// استيراد Excel: لو الباركود موجود عندك قبل كده بيتحدّث (السعر/التكلفة/الكمية...)
+// بدل ما يتكرر كصنف جديد، وده يخلي إعادة استيراد نفس الملف فعليًا "تحديث" للمخزون
 async function addProductsBulk(products) {
     const clientId = currentClientId();
     if(!clientId || !products || products.length === 0) return { success: false, count: 0 };
-    const rows = products.map(p => mapProductToDb(p, clientId));
-    const { data, error } = await getSupabaseClient().from('products').insert(rows).select();
-    if(error) { console.error(error); return { success: false, count: 0, message: error.message }; }
-    return { success: true, count: (data || []).length };
+    const supabase = getSupabaseClient();
+
+    const barcodes = products.map(p => (p.barcode || '').trim()).filter(b => b);
+    let existingByBarcode = {};
+    if(barcodes.length > 0) {
+        const { data: existing } = await supabase.from('products').select('id, barcode').eq('client_id', clientId).in('barcode', barcodes);
+        (existing || []).forEach(p => { existingByBarcode[p.barcode] = p.id; });
+    }
+
+    const toInsert = [];
+    const toUpdate = [];
+    products.forEach(p => {
+        const barcode = (p.barcode || '').trim();
+        const existingId = barcode ? existingByBarcode[barcode] : null;
+        if(existingId) {
+            toUpdate.push({ id: existingId, data: mapProductToDb(p, clientId) });
+        } else {
+            toInsert.push(mapProductToDb(p, clientId));
+        }
+    });
+
+    let count = 0;
+    if(toInsert.length > 0) {
+        const { data, error } = await supabase.from('products').insert(toInsert).select();
+        if(error) { console.error(error); return { success: false, count: 0, message: error.message }; }
+        count += (data || []).length;
+    }
+    for(const u of toUpdate) {
+        const { error } = await supabase.from('products').update(u.data).eq('id', u.id).eq('client_id', clientId);
+        if(error) { console.error(error); return { success: false, count, message: error.message }; }
+        count++;
+    }
+    return { success: true, count, inserted: toInsert.length, updated: toUpdate.length };
 }
 
 async function updateProductById(id, updatedProduct) {
