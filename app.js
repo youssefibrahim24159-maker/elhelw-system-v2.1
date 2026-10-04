@@ -251,6 +251,49 @@ async function addInvoice(invoice) {
     return mapInvoiceFromDb(data);
 }
 
+// تعديل فاتورة موجودة بالفعل - بيرجّع تأثير الفاتورة القديمة على المخزون ورصيد
+// العميل الأول (زي الحذف)، وبعدين يطبّق تأثير النسخة الجديدة (زي الإنشاء)،
+// وبعدين يحدّث صف الفاتورة نفسه - عشان الأرقام تفضل مظبوطة مهما اتعدلت كام مرة
+async function updateInvoiceById(id, invoice) {
+    const clientId = currentClientId();
+    const supabase = getSupabaseClient();
+
+    const { data: oldInv } = await supabase.from('invoices').select('*').eq('id', id).eq('client_id', clientId).maybeSingle();
+    if(!oldInv) return null;
+
+    // 1) نرجّع تأثير النسخة القديمة
+    for(const item of (oldInv.items || [])) {
+        await adjustProductStock(item.id, Number(item.qty || item.quantity || 0));
+    }
+    if(oldInv.customer_id && (oldInv.remaining || 0) > 0) {
+        await adjustCustomerBalance(oldInv.customer_id, -Number(oldInv.remaining || 0));
+    }
+
+    // 2) نطبّق تأثير النسخة الجديدة
+    for(const item of (invoice.items || [])) {
+        await adjustProductStock(item.id, -Number(item.qty || item.quantity || 0));
+    }
+    if(invoice.customerId && invoice.due > 0) {
+        await adjustCustomerBalance(invoice.customerId, Number(invoice.due));
+    }
+
+    const { data, error } = await supabase.from('invoices').update({
+        customer_id: invoice.customerId || null,
+        customer_name: invoice.customerName || 'عميل نقدي',
+        items: invoice.items || [],
+        total: invoice.total || 0,
+        grand_total: invoice.grandTotal || 0,
+        paid: invoice.paid || 0,
+        due: invoice.due || 0,
+        remaining: invoice.due || 0,
+        payment_method: invoice.paymentMethod,
+        status: invoice.status
+    }).eq('id', id).eq('client_id', clientId).select().single();
+
+    if(error) { console.error(error); return null; }
+    return mapInvoiceFromDb(data);
+}
+
 async function deleteInvoiceById(id) {
     const clientId = currentClientId();
     const supabase = getSupabaseClient();

@@ -66,6 +66,7 @@ function renderInvoices(invoicesToRender) {
             <td>
                 <div class="action-buttons">
                     <button class="btn btn-sm btn-outline-info" onclick="viewInvoice('${inv.id}')"><i class="fas fa-eye"></i></button>
+                    <button class="btn btn-sm btn-outline-warning" onclick="editInvoice('${inv.id}')"><i class="fas fa-pen"></i></button>
                     <button class="btn btn-sm btn-outline-danger" onclick="deleteInvoice('${inv.id}')"><i class="fas fa-trash"></i></button>
                 </div>
             </td>
@@ -174,6 +175,121 @@ async function viewInvoice(id) {
 
     document.getElementById('invoiceDetailContent').innerHTML = html;
     new bootstrap.Modal(document.getElementById('invoiceDetailModal')).show();
+}
+
+// ==================== تعديل فاتورة موجودة ====================
+let editInvItems = [];
+let editInvProductsCache = [];
+
+async function editInvoice(id) {
+    const invoices = await getAllInvoices();
+    const inv = invoices.find(i => i.id == id);
+    if(!inv) return;
+
+    document.getElementById('editInvId').textContent = inv.id;
+    document.getElementById('editInvDbId').value = inv.id;
+    document.getElementById('editInvPayment').value = normalizePaymentMethod(inv.paymentMethod);
+    document.getElementById('editInvPaid').value = inv.paid || 0;
+    document.getElementById('editInvAddSearch').value = '';
+    document.getElementById('editInvAddResults').innerHTML = '';
+
+    editInvItems = (inv.items || []).map(i => ({
+        id: i.id, name: i.name, price: Number(i.price) || 0, qty: Number(i.qty || i.quantity || 0)
+    }));
+
+    const customers = await getAllCustomers();
+    const customerSelect = document.getElementById('editInvCustomer');
+    customerSelect.innerHTML = '<option value="">عميل نقدي</option>' +
+        customers.map(c => '<option value="' + c.id + '">' + c.name + '</option>').join('');
+    customerSelect.value = inv.customerId || inv.customer_id || '';
+
+    editInvProductsCache = await getAllProducts();
+
+    renderEditInvoiceItems();
+    new bootstrap.Modal(document.getElementById('editInvoiceModal')).show();
+}
+
+function renderEditInvoiceItems() {
+    const tbody = document.getElementById('editInvItemsBody');
+    tbody.innerHTML = editInvItems.map((item, idx) => `
+        <tr>
+            <td>${item.name}</td>
+            <td><input type="number" min="1" class="form-control form-control-sm" value="${item.qty}" onchange="updateEditInvItem(${idx}, 'qty', this.value)"></td>
+            <td><input type="number" min="0" step="0.01" class="form-control form-control-sm" value="${item.price}" onchange="updateEditInvItem(${idx}, 'price', this.value)"></td>
+            <td>${formatCurrency(item.price * item.qty)}</td>
+            <td><button class="btn btn-sm btn-outline-danger" onclick="removeEditInvItem(${idx})"><i class="fas fa-times"></i></button></td>
+        </tr>
+    `).join('') || '<tr><td colspan="5" class="text-center text-muted">مفيش أصناف - الفاتورة هتتمسح لو اتحفظت فاضية</td></tr>';
+    recalcEditInvoice();
+}
+
+function updateEditInvItem(idx, field, value) {
+    const num = parseFloat(value);
+    if(isNaN(num) || num < (field === 'qty' ? 1 : 0)) { renderEditInvoiceItems(); return; }
+    editInvItems[idx][field] = num;
+    renderEditInvoiceItems();
+}
+
+function removeEditInvItem(idx) {
+    editInvItems.splice(idx, 1);
+    renderEditInvoiceItems();
+}
+
+document.getElementById('editInvAddSearch').addEventListener('input', function() {
+    const term = this.value.trim().toLowerCase();
+    const box = document.getElementById('editInvAddResults');
+    if(!term) { box.innerHTML = ''; return; }
+    const matches = editInvProductsCache.filter(p =>
+        (p.name || '').toLowerCase().includes(term) || (p.barcode || '').toLowerCase().includes(term)
+    ).slice(0, 8);
+    box.innerHTML = matches.map(p =>
+        '<button type="button" class="list-group-item list-group-item-action" onclick="addEditInvItem(' + p.id + ')">' +
+        p.name + ' <span class="text-muted small">(' + formatCurrency(p.price) + ')</span></button>'
+    ).join('') || '<div class="list-group-item text-muted small">مفيش نتائج</div>';
+});
+
+function addEditInvItem(productId) {
+    const product = editInvProductsCache.find(p => p.id == productId);
+    if(!product) return;
+    const existing = editInvItems.find(i => i.id == productId);
+    if(existing) { existing.qty += 1; }
+    else { editInvItems.push({ id: product.id, name: product.name, price: Number(product.price) || 0, qty: 1 }); }
+    document.getElementById('editInvAddSearch').value = '';
+    document.getElementById('editInvAddResults').innerHTML = '';
+    renderEditInvoiceItems();
+}
+
+function recalcEditInvoice() {
+    const total = editInvItems.reduce((s, i) => s + (i.price * i.qty), 0);
+    const paid = parseFloat(document.getElementById('editInvPaid').value) || 0;
+    const due = total - paid;
+    document.getElementById('editInvTotal').value = formatCurrency(total);
+    document.getElementById('editInvDue').value = formatCurrency(due);
+}
+
+async function saveEditedInvoice() {
+    const id = document.getElementById('editInvDbId').value;
+    const customerId = document.getElementById('editInvCustomer').value || null;
+    const customerSelect = document.getElementById('editInvCustomer');
+    const customerName = customerId ? customerSelect.options[customerSelect.selectedIndex].text : 'عميل نقدي';
+    const paymentMethod = document.getElementById('editInvPayment').value;
+    const paid = parseFloat(document.getElementById('editInvPaid').value) || 0;
+    const total = editInvItems.reduce((s, i) => s + (i.price * i.qty), 0);
+    const due = total - paid;
+
+    const updated = await updateInvoiceById(id, {
+        customerId, customerName,
+        items: editInvItems.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+        total, grandTotal: total, paid, due,
+        paymentMethod, status: due > 0 ? 'غير مدفوع' : 'مدفوع'
+    });
+
+    if(!updated) { showNotification('حصل خطأ أثناء حفظ التعديل ❌', 'error'); return; }
+
+    const modal = bootstrap.Modal.getInstance(document.getElementById('editInvoiceModal'));
+    if(modal) modal.hide();
+    showNotification('تم تعديل الفاتورة وتحديث المخزون والرصيد ✅', 'success');
+    loadInvoices();
 }
 
 function printCurrentInvoice() {
