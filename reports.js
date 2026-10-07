@@ -376,5 +376,10 @@ function closeSidebar() {
 
 // ==================== التهيئة ====================
 if(document.getElementById('salesChart')) {
+    // افتراضياً التقرير بيعرض النهارده بس (مش كل الأيام)
+    const _n = new Date();
+    const _today = _n.getFullYear() + '-' + String(_n.getMonth() + 1).padStart(2, '0') + '-' + String(_n.getDate()).padStart(2, '0');
+    if(document.getElementById('startDate') && !document.getElementById('startDate').value) document.getElementById('startDate').value = _today;
+    if(document.getElementById('endDate') && !document.getElementById('endDate').value) document.getElementById('endDate').value = _today;
     updateReports();
 }

@@ -75,6 +75,7 @@
                 </div>
                 
                 <!-- إحصائيات -->
+                <div class="row mb-3"><div class="col-12" id="netProfitBox"></div></div>
                 <div class="row mb-4" id="dashboardStats"></div>
                 
                 <!-- أزرار الإجراءات السريعة -->
@@ -305,9 +306,32 @@
                 }
             }
             
-            const todayNet = todaySales - todayExpenses;
+            // ربح اليوم الحقيقي = (مبيعات اليوم - مرتجعات اليوم) - (تكلفة البضاعة المباعة - تكلفة المرتجع) - مصروفات اليوم
+            const salesReturns = await getAllSalesReturns();
+            const costOf = id => { const p = products.find(pr => pr.id == id); return p ? (p.cost || 0) : 0; };
+            let todayCost = 0;
+            for(let i = 0; i < invoices.length; i++) {
+                if(!isSameDay(invoices[i].date)) continue;
+                (invoices[i].items || []).forEach(it => { todayCost += costOf(it.id) * (it.quantity || it.qty || 0); });
+            }
+            let todayReturnsValue = 0, todayReturnsCost = 0;
+            for(let i = 0; i < salesReturns.length; i++) {
+                if(!isSameDay(salesReturns[i].date)) continue;
+                todayReturnsValue += salesReturns[i].total || 0;
+                (salesReturns[i].items || []).forEach(it => { todayReturnsCost += costOf(it.id) * (it.quantity || 0); });
+            }
+            const todayGrossProfit = (todaySales - todayReturnsValue) - (todayCost - todayReturnsCost);
+            const todayNet = todayGrossProfit - todayExpenses;
+            const todayInvoices = invoices.filter(inv => isSameDay(inv.date));
             const totalNet = totalSales - totalExpenses;
             
+            document.getElementById('netProfitBox').innerHTML = `
+                <div class="stat-card" style="text-align:center; padding:28px 16px; border:2px solid ${todayNet < 0 ? '#dc2626' : '#16a34a'};">
+                    <div class="stat-icon"><i class="fas fa-scale-balanced"></i></div>
+                    <div class="stat-label" style="font-size:1.1rem; font-weight:700;">صافي الربح اليوم</div>
+                    <div class="stat-value" style="font-size:2.4rem; color:${todayNet < 0 ? '#dc2626' : '#16a34a'}">${formatCurrency(todayNet)}</div>
+                </div>
+            `;
             document.getElementById('dashboardStats').innerHTML = `
                 <div class="col-md-3 col-6 mb-3">
                     <div class="stat-card">
@@ -332,9 +356,9 @@
                 </div>
                 <div class="col-md-3 col-6 mb-3">
                     <div class="stat-card">
-                        <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
-                        <div class="stat-value">${formatCurrency(totalSales)}</div>
-                        <div class="stat-label">إجمالي المبيعات</div>
+                        <div class="stat-icon"><i class="fas fa-file-invoice"></i></div>
+                        <div class="stat-value ">${todayInvoices.length}</div>
+                        <div class="stat-label">عدد فواتير اليوم</div>
                     </div>
                 </div>
                 <div class="col-md-3 col-6 mb-3">
@@ -346,9 +370,30 @@
                 </div>
                 <div class="col-md-3 col-6 mb-3">
                     <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-undo"></i></div>
+                        <div class="stat-value text-danger">${formatCurrency(todayReturnsValue)}</div>
+                        <div class="stat-label">مرتجعات اليوم</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-sack-dollar"></i></div>
+                        <div class="stat-value " style="color:${todayGrossProfit < 0 ? '#dc2626' : '#16a34a'}">${formatCurrency(todayGrossProfit)}</div>
+                        <div class="stat-label">ربح اليوم (قبل المصروفات)</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
+                        <div class="stat-value ">${formatCurrency(totalSales)}</div>
+                        <div class="stat-label">إجمالي المبيعات</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="stat-card">
                         <div class="stat-icon"><i class="fas fa-scale-balanced"></i></div>
-                        <div class="stat-value" style="color:${todayNet < 0 ? '#dc2626' : '#16a34a'}">${formatCurrency(todayNet)}</div>
-                        <div class="stat-label">صافي اليوم (بعد خصم المصروفات)</div>
+                        <div class="stat-value " style="color:${todayNet < 0 ? '#dc2626' : '#16a34a'}">${formatCurrency(todayNet)}</div>
+                        <div class="stat-label">صافي ربح اليوم (بعد التكلفة والمصروفات)</div>
                     </div>
                 </div>
                 <div class="col-md-3 col-6 mb-3">
@@ -361,19 +406,20 @@
                 <div class="col-md-3 col-6 mb-3">
                     <div class="stat-card">
                         <div class="stat-icon"><i class="fas fa-sack-dollar"></i></div>
-                        <div class="stat-value" style="color:${totalNet < 0 ? '#dc2626' : '#16a34a'}">${formatCurrency(totalNet)}</div>
+                        <div class="stat-value " style="color:${totalNet < 0 ? '#dc2626' : '#16a34a'}">${formatCurrency(totalNet)}</div>
                         <div class="stat-label">الصافي الإجمالي (بعد خصم المصروفات)</div>
                     </div>
                 </div>
             `;
             
             let recentHtml = '';
-            for(let i = invoices.length - 1; i >= 0 && i >= invoices.length - 5; i--) {
-                const inv = invoices[i];
+            const recentToday = invoices.slice().sort((x, y) => new Date(y.date) - new Date(x.date)).slice(0, 5);
+            for(let i = 0; i < recentToday.length; i++) {
+                const inv = recentToday[i];
                 recentHtml += `
                     <tr>
                         <td><strong>#${inv.id}</strong></td>
-                        <td>${inv.date || '-'}</td>
+                        <td>${inv.dateFormatted || inv.date || '-'}</td>
                         <td>${inv.customerName || 'نقدي'}</td>
                         <td class="fw-bold text-primary">${formatCurrency(inv.grandTotal)}</td>
                         <td>${inv.due > 0 ? '<span class="badge bg-warning pulse-animation">مدين</span>' : '<span class="badge bg-success">مدفوع</span>'}</td>
@@ -400,6 +446,35 @@
         
         loadDashboard();
         checkForOldLocalData();
+
+        // ==================== تجديد الصفحة الرئيسية مع كل يوم جديد ====================
+        function todayKey() {
+            const n = new Date();
+            return n.getFullYear() + '-' + n.getMonth() + '-' + n.getDate();
+        }
+        let lastDayKey = todayKey();
+
+        function refreshDashboardNow() {
+            lastDayKey = todayKey();
+            document.getElementById('currentDate').innerText = new Date().toLocaleDateString('ar-EG');
+            loadDashboard();
+        }
+
+        function checkDayChange() {
+            if(todayKey() !== lastDayKey) refreshDashboardNow();
+        }
+
+        // بيتشيك كل 30 ثانية: لو اليوم اتغير (عدّى منتصف الليل) بيجدد الأرقام لوحده
+        setInterval(checkDayChange, 30000);
+
+        // لما ترجع للتاب أو الموبايل يصحى، بيجدد لو اليوم اتغير أو عدّى أكتر من دقيقتين
+        let lastRefreshAt = Date.now();
+        const _origRefresh = refreshDashboardNow;
+        refreshDashboardNow = function() { lastRefreshAt = Date.now(); _origRefresh(); };
+        document.addEventListener('visibilitychange', function() {
+            if(document.visibilityState !== 'visible') return;
+            if(todayKey() !== lastDayKey || Date.now() - lastRefreshAt > 120000) refreshDashboardNow();
+        });
     </script>
 <script>renderUserBar(currentSession);</script>
 </body>
