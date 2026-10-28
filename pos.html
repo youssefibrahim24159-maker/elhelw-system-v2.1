@@ -518,7 +518,28 @@ function renderCart() {
             printInvoiceReceipt(invoice);
         }
         
+// قفل فوري ضد الضغط المتكرر: بيتقفل قبل أي await، وبيتفك في كل الحالات
+let _invoiceSaving = false;
+let _lastInvoiceClickAt = 0;
 async function confirmInvoice() {
+    const now = Date.now();
+    if(_invoiceSaving || now - _lastInvoiceClickAt < 1500) return;
+    _lastInvoiceClickAt = now;
+    _invoiceSaving = true;
+    const btn = document.getElementById('confirmInvoiceBtn');
+    if(btn) btn.disabled = true;
+    try {
+        await _confirmInvoiceInner();
+    } finally {
+        _invoiceSaving = false;
+        if(btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check-circle me-2"></i> إتمام الفاتورة';
+        }
+    }
+}
+
+async function _confirmInvoiceInner() {
     if(cart.length === 0) {
         showNotification('أضف منتجات أولاً ❌', 'error');
         return;
